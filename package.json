@@ -31,5 +31,18 @@
     "ts-jest": "^27.0.7",
     "ts-node": "^9.0.0",
     "typescript": "~3.9.7"
-  }
+  },
+  "main": "jest.config.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aws-ia/ecs-consul-mesh-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aws-ia/ecs-consul-mesh-extension/issues"
+  },
+  "homepage": "https://github.com/aws-ia/ecs-consul-mesh-extension#readme"
 }
