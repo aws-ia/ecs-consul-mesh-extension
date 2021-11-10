@@ -2,7 +2,7 @@ import { expect as expectCDK, haveResource } from '@aws-cdk/assert';
 import * as cdk from '@aws-cdk/core';
 import { Environment, ServiceDescription, Container, Service } from '@aws-cdk-containers/ecs-service-extensions';
 import * as ecs from '@aws-cdk/aws-ecs';
-import { ConsulMeshExtension } from '../../consul-extension/lib/consul-mesh-extension';
+import { ConsulMeshExtension, RetryJoin } from '../lib/consul-mesh-extension'
 import * as ec2 from '@aws-cdk/aws-ec2';
 import { Stack } from '@aws-cdk/core';
 import * as secretsmanager from '@aws-cdk/aws-secretsmanager';
@@ -18,7 +18,7 @@ test('Test extension with default params', () => {
     vpc: environment.vpc
   });
 
-  const consulClientSercurityGroup = new ec2.SecurityGroup(stack, 'consulClientSecurityGroup', {
+  const consulClientSecurityGroup = new ec2.SecurityGroup(stack, 'consulClientSecurityGroup', {
     vpc: environment.vpc
   });
 
@@ -34,13 +34,13 @@ test('Test extension with default params', () => {
     'gossipEncryptValue',
   );
 
-  consulClientSercurityGroup.addIngressRule(
-    consulClientSercurityGroup,
+  consulClientSecurityGroup.addIngressRule(
+    consulClientSecurityGroup,
     ec2.Port.tcp(8301),
     "allow all the clients in the mesh talk to each other"
   );
-  consulClientSercurityGroup.addIngressRule(
-    consulClientSercurityGroup,
+  consulClientSecurityGroup.addIngressRule(
+    consulClientSecurityGroup,
     ec2.Port.udp(8301),
     "allow all the clients in the mesh talk to each other"
   )
@@ -54,14 +54,14 @@ test('Test extension with default params', () => {
   }));
 
   nameDescription.add(new ConsulMeshExtension({
-    retryJoin: "provider=aws region=us-west-2 tag_key=Name tag_value=test-consul-server",
+    retryJoin: new RetryJoin({ region: "us-west-2" }),
     consulServerSercurityGroup: consulSecurityGroup,
     port: 3000,
-    consulClientSercurityGroup,
-    family: "name",
+    consulClientSecurityGroup,
     tls: true,
     consulCACert: TLSSecret,
-    gossipEncryptKey
+    gossipEncryptKey,
+    serviceDiscoveryName: "name"
   }));
 
   const nameService = new Service(stack, 'name', {
@@ -79,14 +79,14 @@ test('Test extension with default params', () => {
   }));
 
   greeterDescription.add(new ConsulMeshExtension({
-    retryJoin: "provider=aws region=us-west-2 tag_key=Name tag_value=test-consul-server", // use interface, use ENUMs
+    retryJoin: new RetryJoin({ region: "us-west-2" }),
     consulServerSercurityGroup: consulSecurityGroup,
     port: 3000,
-    consulClientSercurityGroup,
-    family: "greeter",
+    consulClientSecurityGroup,
     tls: true,
     consulCACert: TLSSecret,
-    gossipEncryptKey
+    gossipEncryptKey,
+    serviceDiscoveryName: "greeter"
   }));
 
   const greeterService = new Service(stack, 'greeter', {
@@ -141,7 +141,7 @@ test('Test extension with default params', () => {
             "Fn::Join": [
               "",
               [
-                "ECS_IPV4=$(curl -s $ECS_CONTAINER_METADATA_URI | jq -r '.Networks[0].IPv4Addresses[0]') && if [ true == true ]; then                 echo \"{{resolve:secretsmanager:arn:",
+                "cp /bin/consul /bin/consul-inject/consul &&\n                ECS_IPV4=$(curl -s $ECS_CONTAINER_METADATA_URI | jq -r '.Networks[0].IPv4Addresses[0]') && if [ true == true ]; then                 echo \"{{resolve:secretsmanager:arn:",
                 {
                   "Ref": "AWS::Partition"
                 },
@@ -153,7 +153,7 @@ test('Test extension with default params', () => {
                 {
                   "Ref": "AWS::AccountId"
                 },
-                ":secret:TLSEncryptValue:SecretString:::}}\" > /tmp/consul-agent-ca-cert.pem;\n                fi &&\n                  exec consul agent                   -advertise $ECS_IPV4                   -data-dir /consul/data                   -client 0.0.0.0                   -hcl 'addresses = { dns = \"127.0.0.1\" }'                   -hcl 'addresses = { grpc = \"127.0.0.1\" }'                   -hcl 'addresses = { http = \"127.0.0.1\" }'                   -retry-join \"provider=aws region=us-west-2 tag_key=Name tag_value=test-consul-server\"                   -hcl 'telemetry { disable_compat_1.9 = true }'                   -hcl 'leave_on_terminate = true'                   -hcl 'ports { grpc = 8502 }'                   -hcl 'advertise_reconnect_timeout = \"15m\"'                   -hcl 'enable_central_service_config = true'                -hcl 'ca_file = \"/tmp/consul-agent-ca-cert.pem\"'                -hcl 'auto_encrypt = {tls = true}'                -hcl \"auto_encrypt = {ip_san = [ \\\"$ECS_IPV4\\\" ]}\"                -hcl 'verify_outgoing = true'             -encrypt \"{{resolve:secretsmanager:arn:",
+                ":secret:TLSEncryptValue:SecretString:::}}\" > /tmp/consul-agent-ca-cert.pem;\n                fi &&\n                  exec consul agent                   -advertise $ECS_IPV4                   -data-dir /consul/data                   -client 0.0.0.0                   -datacenter \"dc1\"                   -hcl 'addresses = { dns = \"127.0.0.1\" }'                   -hcl 'addresses = { grpc = \"127.0.0.1\" }'                   -hcl 'addresses = { http = \"127.0.0.1\" }'                   -retry-join \"provider=aws region=us-west-2 tag_key=Name tag_value=test-consul-server\"                   -hcl 'telemetry { disable_compat_1.9 = true }'                   -hcl 'leave_on_terminate = true'                   -hcl 'ports { grpc = 8502 }'                   -hcl 'advertise_reconnect_timeout = \"15m\"'                   -hcl 'enable_central_service_config = true'                -hcl 'ca_file = \"/tmp/consul-agent-ca-cert.pem\"'                -hcl 'auto_encrypt = {tls = true}'                -hcl \"auto_encrypt = {ip_san = [ \\\"$ECS_IPV4\\\" ]}\"                -hcl 'verify_outgoing = true'             -encrypt \"{{resolve:secretsmanager:arn:",
                 {
                   "Ref": "AWS::Partition"
                 },
@@ -199,6 +199,11 @@ test('Test extension with default params', () => {
             "ContainerPath": "/consul/config",
             "ReadOnly": false,
             "SourceVolume": "consul-config"
+          },
+          {
+            "ContainerPath": "/bin/consul-inject",
+            "ReadOnly": false,
+            "SourceVolume": "consul_binary"
           }
         ],
         "Name": "consul-client",
@@ -220,12 +225,13 @@ test('Test extension with default params', () => {
       {
         "Command": [
           "mesh-init",
-          "-envoy-bootstrap-file=/consul/data/envoy-bootstrap.json",
+          "-envoy-bootstrap-dir=/consul/data",
           "-port=3000",
-          "-upstreams=name:3001"
+          "-upstreams=name:3001",
+          "-service-name=greeter"
         ],
         "Essential": false,
-        "Image": "hashicorp/consul-ecs:0.1.2",
+        "Image": "hashicorpdev/consul-ecs:latest",
         "LogConfiguration": {
           "LogDriver": "awslogs",
           "Options": {
@@ -244,6 +250,11 @@ test('Test extension with default params', () => {
             "ContainerPath": "/consul/data",
             "ReadOnly": false,
             "SourceVolume": "consul-data"
+          },
+          {
+            "ContainerPath": "/bin/consul-inject",
+            "ReadOnly": true,
+            "SourceVolume": "consul_binary"
           }
         ],
         "Name": "consul-ecs-mesh-init",
@@ -251,6 +262,8 @@ test('Test extension with default params', () => {
       },
       {
         "Command": [
+          "/bin/sh",
+          "-c",
           "envoy --config-path /consul/data/envoy-bootstrap.json"
         ],
         "DependsOn": [
@@ -260,8 +273,8 @@ test('Test extension with default params', () => {
           }
         ],
         "EntryPoint": [
-          "/bin/sh",
-          "-c"
+          "/consul/data/consul-ecs",
+          "envoy-entrypoint"
         ],
         "Essential": false,
         "HealthCheck": {
@@ -313,7 +326,7 @@ test('Test extension with default params', () => {
         "Arn"
       ]
     },
-    "Family": "greeter",
+    "Family": "greetertaskdefinition",
     "Memory": "2048",
     "NetworkMode": "awsvpc",
     "RequiresCompatibilities": [
@@ -332,8 +345,12 @@ test('Test extension with default params', () => {
       },
       {
         "Name": "consul-config"
+      },
+      {
+        "Name": "consul_binary"
       }
     ]
+
   }
   ));
 
@@ -375,7 +392,7 @@ test('Test extension with default params', () => {
             "Fn::Join": [
               "",
               [
-                "ECS_IPV4=$(curl -s $ECS_CONTAINER_METADATA_URI | jq -r '.Networks[0].IPv4Addresses[0]') && if [ true == true ]; then                 echo \"{{resolve:secretsmanager:arn:",
+                "cp /bin/consul /bin/consul-inject/consul &&\n                ECS_IPV4=$(curl -s $ECS_CONTAINER_METADATA_URI | jq -r '.Networks[0].IPv4Addresses[0]') && if [ true == true ]; then                 echo \"{{resolve:secretsmanager:arn:",
                 {
                   "Ref": "AWS::Partition"
                 },
@@ -387,7 +404,7 @@ test('Test extension with default params', () => {
                 {
                   "Ref": "AWS::AccountId"
                 },
-                ":secret:TLSEncryptValue:SecretString:::}}\" > /tmp/consul-agent-ca-cert.pem;\n                fi &&\n                  exec consul agent                   -advertise $ECS_IPV4                   -data-dir /consul/data                   -client 0.0.0.0                   -hcl 'addresses = { dns = \"127.0.0.1\" }'                   -hcl 'addresses = { grpc = \"127.0.0.1\" }'                   -hcl 'addresses = { http = \"127.0.0.1\" }'                   -retry-join \"provider=aws region=us-west-2 tag_key=Name tag_value=test-consul-server\"                   -hcl 'telemetry { disable_compat_1.9 = true }'                   -hcl 'leave_on_terminate = true'                   -hcl 'ports { grpc = 8502 }'                   -hcl 'advertise_reconnect_timeout = \"15m\"'                   -hcl 'enable_central_service_config = true'                -hcl 'ca_file = \"/tmp/consul-agent-ca-cert.pem\"'                -hcl 'auto_encrypt = {tls = true}'                -hcl \"auto_encrypt = {ip_san = [ \\\"$ECS_IPV4\\\" ]}\"                -hcl 'verify_outgoing = true'             -encrypt \"{{resolve:secretsmanager:arn:",
+                ":secret:TLSEncryptValue:SecretString:::}}\" > /tmp/consul-agent-ca-cert.pem;\n                fi &&\n                  exec consul agent                   -advertise $ECS_IPV4                   -data-dir /consul/data                   -client 0.0.0.0                   -datacenter \"dc1\"                   -hcl 'addresses = { dns = \"127.0.0.1\" }'                   -hcl 'addresses = { grpc = \"127.0.0.1\" }'                   -hcl 'addresses = { http = \"127.0.0.1\" }'                   -retry-join \"provider=aws region=us-west-2 tag_key=Name tag_value=test-consul-server\"                   -hcl 'telemetry { disable_compat_1.9 = true }'                   -hcl 'leave_on_terminate = true'                   -hcl 'ports { grpc = 8502 }'                   -hcl 'advertise_reconnect_timeout = \"15m\"'                   -hcl 'enable_central_service_config = true'                -hcl 'ca_file = \"/tmp/consul-agent-ca-cert.pem\"'                -hcl 'auto_encrypt = {tls = true}'                -hcl \"auto_encrypt = {ip_san = [ \\\"$ECS_IPV4\\\" ]}\"                -hcl 'verify_outgoing = true'             -encrypt \"{{resolve:secretsmanager:arn:",
                 {
                   "Ref": "AWS::Partition"
                 },
@@ -433,6 +450,11 @@ test('Test extension with default params', () => {
             "ContainerPath": "/consul/config",
             "ReadOnly": false,
             "SourceVolume": "consul-config"
+          },
+          {
+            "ContainerPath": "/bin/consul-inject",
+            "ReadOnly": false,
+            "SourceVolume": "consul_binary"
           }
         ],
         "Name": "consul-client",
@@ -454,12 +476,13 @@ test('Test extension with default params', () => {
       {
         "Command": [
           "mesh-init",
-          "-envoy-bootstrap-file=/consul/data/envoy-bootstrap.json",
+          "-envoy-bootstrap-dir=/consul/data",
           "-port=3000",
-          "-upstreams="
+          "-upstreams=",
+          "-service-name=name"
         ],
         "Essential": false,
-        "Image": "hashicorp/consul-ecs:0.1.2",
+        "Image": "hashicorpdev/consul-ecs:latest",
         "LogConfiguration": {
           "LogDriver": "awslogs",
           "Options": {
@@ -478,6 +501,11 @@ test('Test extension with default params', () => {
             "ContainerPath": "/consul/data",
             "ReadOnly": false,
             "SourceVolume": "consul-data"
+          },
+          {
+            "ContainerPath": "/bin/consul-inject",
+            "ReadOnly": true,
+            "SourceVolume": "consul_binary"
           }
         ],
         "Name": "consul-ecs-mesh-init",
@@ -485,6 +513,8 @@ test('Test extension with default params', () => {
       },
       {
         "Command": [
+          "/bin/sh",
+          "-c",
           "envoy --config-path /consul/data/envoy-bootstrap.json"
         ],
         "DependsOn": [
@@ -494,8 +524,8 @@ test('Test extension with default params', () => {
           }
         ],
         "EntryPoint": [
-          "/bin/sh",
-          "-c"
+          "/consul/data/consul-ecs",
+          "envoy-entrypoint"
         ],
         "Essential": false,
         "HealthCheck": {
@@ -547,7 +577,7 @@ test('Test extension with default params', () => {
         "Arn"
       ]
     },
-    "Family": "name",
+    "Family": "nametaskdefinition",
     "Memory": "2048",
     "NetworkMode": "awsvpc",
     "RequiresCompatibilities": [
@@ -566,8 +596,12 @@ test('Test extension with default params', () => {
       },
       {
         "Name": "consul-config"
+      },
+      {
+        "Name": "consul_binary"
       }
     ]
+
   }
   ));
 
@@ -669,7 +703,7 @@ test('Test extension with custom params', () => {
     vpc: environment.vpc
   });
 
-  const consulClientSercurityGroup = new ec2.SecurityGroup(stack, 'consulClientSecurityGroup', {
+  const consulClientSecurityGroup = new ec2.SecurityGroup(stack, 'consulClientSecurityGroup', {
     vpc: environment.vpc
   });
 
@@ -685,13 +719,13 @@ test('Test extension with custom params', () => {
     'gossipEncryptValue',
   );
 
-  consulClientSercurityGroup.addIngressRule(
-    consulClientSercurityGroup,
+  consulClientSecurityGroup.addIngressRule(
+    consulClientSecurityGroup,
     ec2.Port.tcp(8301),
     "allow all the clients in the mesh talk to each other"
   );
-  consulClientSercurityGroup.addIngressRule(
-    consulClientSercurityGroup,
+  consulClientSecurityGroup.addIngressRule(
+    consulClientSecurityGroup,
     ec2.Port.udp(8301),
     "allow all the clients in the mesh talk to each other"
   )
@@ -705,17 +739,17 @@ test('Test extension with custom params', () => {
   }));
 
   nameDescription.add(new ConsulMeshExtension({
-    retryJoin: "provider=aws region=us-west-2 tag_key=Name tag_value=test-consul-server",
+    retryJoin: new RetryJoin({ region: "us-west-2" }),
     consulServerSercurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientImage: "myCustomConsulClientImage:1.0",
     consulEcsImage: "myCustomConsulEcsImage:1.0",
     envoyProxyImage: "myCustomEnvoyImage:1.0",
-    consulClientSercurityGroup,
-    family: "name",
+    consulClientSecurityGroup,
     tls: true,
     consulCACert: TLSSecret,
-    gossipEncryptKey
+    gossipEncryptKey,
+    serviceDiscoveryName: "name"
   }));
 
   const nameService = new Service(stack, 'name', {
@@ -733,17 +767,17 @@ test('Test extension with custom params', () => {
   }));
 
   greeterDescription.add(new ConsulMeshExtension({
-    retryJoin: "provider=aws region=us-west-2 tag_key=Name tag_value=test-consul-server", // use interface, use ENUMs
+    retryJoin: new RetryJoin({ region: "us-west-2" }),
     consulServerSercurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientImage: "myCustomConsulClientImage:1.0",
     consulEcsImage: "myCustomConsulEcsImage:1.0",
     envoyProxyImage: "myCustomEnvoyImage:1.0",
-    consulClientSercurityGroup,
-    family: "greeter",
+    consulClientSecurityGroup,
     tls: true,
     consulCACert: TLSSecret,
-    gossipEncryptKey
+    gossipEncryptKey,
+    serviceDiscoveryName: "greeter"
   }));
 
   const greeterService = new Service(stack, 'greeter', {
@@ -798,7 +832,7 @@ test('Test extension with custom params', () => {
             "Fn::Join": [
               "",
               [
-                "ECS_IPV4=$(curl -s $ECS_CONTAINER_METADATA_URI | jq -r '.Networks[0].IPv4Addresses[0]') && if [ true == true ]; then                 echo \"{{resolve:secretsmanager:arn:",
+                "cp /bin/consul /bin/consul-inject/consul &&\n                ECS_IPV4=$(curl -s $ECS_CONTAINER_METADATA_URI | jq -r '.Networks[0].IPv4Addresses[0]') && if [ true == true ]; then                 echo \"{{resolve:secretsmanager:arn:",
                 {
                   "Ref": "AWS::Partition"
                 },
@@ -810,7 +844,7 @@ test('Test extension with custom params', () => {
                 {
                   "Ref": "AWS::AccountId"
                 },
-                ":secret:TLSEncryptValue:SecretString:::}}\" > /tmp/consul-agent-ca-cert.pem;\n                fi &&\n                  exec consul agent                   -advertise $ECS_IPV4                   -data-dir /consul/data                   -client 0.0.0.0                   -hcl 'addresses = { dns = \"127.0.0.1\" }'                   -hcl 'addresses = { grpc = \"127.0.0.1\" }'                   -hcl 'addresses = { http = \"127.0.0.1\" }'                   -retry-join \"provider=aws region=us-west-2 tag_key=Name tag_value=test-consul-server\"                   -hcl 'telemetry { disable_compat_1.9 = true }'                   -hcl 'leave_on_terminate = true'                   -hcl 'ports { grpc = 8502 }'                   -hcl 'advertise_reconnect_timeout = \"15m\"'                   -hcl 'enable_central_service_config = true'                -hcl 'ca_file = \"/tmp/consul-agent-ca-cert.pem\"'                -hcl 'auto_encrypt = {tls = true}'                -hcl \"auto_encrypt = {ip_san = [ \\\"$ECS_IPV4\\\" ]}\"                -hcl 'verify_outgoing = true'             -encrypt \"{{resolve:secretsmanager:arn:",
+                ":secret:TLSEncryptValue:SecretString:::}}\" > /tmp/consul-agent-ca-cert.pem;\n                fi &&\n                  exec consul agent                   -advertise $ECS_IPV4                   -data-dir /consul/data                   -client 0.0.0.0                   -datacenter \"dc1\"                   -hcl 'addresses = { dns = \"127.0.0.1\" }'                   -hcl 'addresses = { grpc = \"127.0.0.1\" }'                   -hcl 'addresses = { http = \"127.0.0.1\" }'                   -retry-join \"provider=aws region=us-west-2 tag_key=Name tag_value=test-consul-server\"                   -hcl 'telemetry { disable_compat_1.9 = true }'                   -hcl 'leave_on_terminate = true'                   -hcl 'ports { grpc = 8502 }'                   -hcl 'advertise_reconnect_timeout = \"15m\"'                   -hcl 'enable_central_service_config = true'                -hcl 'ca_file = \"/tmp/consul-agent-ca-cert.pem\"'                -hcl 'auto_encrypt = {tls = true}'                -hcl \"auto_encrypt = {ip_san = [ \\\"$ECS_IPV4\\\" ]}\"                -hcl 'verify_outgoing = true'             -encrypt \"{{resolve:secretsmanager:arn:",
                 {
                   "Ref": "AWS::Partition"
                 },
@@ -856,6 +890,11 @@ test('Test extension with custom params', () => {
             "ContainerPath": "/consul/config",
             "ReadOnly": false,
             "SourceVolume": "consul-config"
+          },
+          {
+            "ContainerPath": "/bin/consul-inject",
+            "ReadOnly": false,
+            "SourceVolume": "consul_binary"
           }
         ],
         "Name": "consul-client",
@@ -877,9 +916,10 @@ test('Test extension with custom params', () => {
       {
         "Command": [
           "mesh-init",
-          "-envoy-bootstrap-file=/consul/data/envoy-bootstrap.json",
+          "-envoy-bootstrap-dir=/consul/data",
           "-port=3000",
-          "-upstreams=name:3001"
+          "-upstreams=name:3001",
+          "-service-name=greeter"
         ],
         "Essential": false,
         "Image": "myCustomConsulEcsImage:1.0",
@@ -901,6 +941,11 @@ test('Test extension with custom params', () => {
             "ContainerPath": "/consul/data",
             "ReadOnly": false,
             "SourceVolume": "consul-data"
+          },
+          {
+            "ContainerPath": "/bin/consul-inject",
+            "ReadOnly": true,
+            "SourceVolume": "consul_binary"
           }
         ],
         "Name": "consul-ecs-mesh-init",
@@ -908,6 +953,8 @@ test('Test extension with custom params', () => {
       },
       {
         "Command": [
+          "/bin/sh",
+          "-c",
           "envoy --config-path /consul/data/envoy-bootstrap.json"
         ],
         "DependsOn": [
@@ -917,8 +964,8 @@ test('Test extension with custom params', () => {
           }
         ],
         "EntryPoint": [
-          "/bin/sh",
-          "-c"
+          "/consul/data/consul-ecs",
+          "envoy-entrypoint"
         ],
         "Essential": false,
         "HealthCheck": {
@@ -970,7 +1017,7 @@ test('Test extension with custom params', () => {
         "Arn"
       ]
     },
-    "Family": "greeter",
+    "Family": "greetertaskdefinition",
     "Memory": "2048",
     "NetworkMode": "awsvpc",
     "RequiresCompatibilities": [
@@ -989,6 +1036,9 @@ test('Test extension with custom params', () => {
       },
       {
         "Name": "consul-config"
+      },
+      {
+        "Name": "consul_binary"
       }
     ]
   }
@@ -1032,7 +1082,7 @@ test('Test extension with custom params', () => {
             "Fn::Join": [
               "",
               [
-                "ECS_IPV4=$(curl -s $ECS_CONTAINER_METADATA_URI | jq -r '.Networks[0].IPv4Addresses[0]') && if [ true == true ]; then                 echo \"{{resolve:secretsmanager:arn:",
+                "cp /bin/consul /bin/consul-inject/consul &&\n                ECS_IPV4=$(curl -s $ECS_CONTAINER_METADATA_URI | jq -r '.Networks[0].IPv4Addresses[0]') && if [ true == true ]; then                 echo \"{{resolve:secretsmanager:arn:",
                 {
                   "Ref": "AWS::Partition"
                 },
@@ -1044,7 +1094,7 @@ test('Test extension with custom params', () => {
                 {
                   "Ref": "AWS::AccountId"
                 },
-                ":secret:TLSEncryptValue:SecretString:::}}\" > /tmp/consul-agent-ca-cert.pem;\n                fi &&\n                  exec consul agent                   -advertise $ECS_IPV4                   -data-dir /consul/data                   -client 0.0.0.0                   -hcl 'addresses = { dns = \"127.0.0.1\" }'                   -hcl 'addresses = { grpc = \"127.0.0.1\" }'                   -hcl 'addresses = { http = \"127.0.0.1\" }'                   -retry-join \"provider=aws region=us-west-2 tag_key=Name tag_value=test-consul-server\"                   -hcl 'telemetry { disable_compat_1.9 = true }'                   -hcl 'leave_on_terminate = true'                   -hcl 'ports { grpc = 8502 }'                   -hcl 'advertise_reconnect_timeout = \"15m\"'                   -hcl 'enable_central_service_config = true'                -hcl 'ca_file = \"/tmp/consul-agent-ca-cert.pem\"'                -hcl 'auto_encrypt = {tls = true}'                -hcl \"auto_encrypt = {ip_san = [ \\\"$ECS_IPV4\\\" ]}\"                -hcl 'verify_outgoing = true'             -encrypt \"{{resolve:secretsmanager:arn:",
+                ":secret:TLSEncryptValue:SecretString:::}}\" > /tmp/consul-agent-ca-cert.pem;\n                fi &&\n                  exec consul agent                   -advertise $ECS_IPV4                   -data-dir /consul/data                   -client 0.0.0.0                   -datacenter \"dc1\"                   -hcl 'addresses = { dns = \"127.0.0.1\" }'                   -hcl 'addresses = { grpc = \"127.0.0.1\" }'                   -hcl 'addresses = { http = \"127.0.0.1\" }'                   -retry-join \"provider=aws region=us-west-2 tag_key=Name tag_value=test-consul-server\"                   -hcl 'telemetry { disable_compat_1.9 = true }'                   -hcl 'leave_on_terminate = true'                   -hcl 'ports { grpc = 8502 }'                   -hcl 'advertise_reconnect_timeout = \"15m\"'                   -hcl 'enable_central_service_config = true'                -hcl 'ca_file = \"/tmp/consul-agent-ca-cert.pem\"'                -hcl 'auto_encrypt = {tls = true}'                -hcl \"auto_encrypt = {ip_san = [ \\\"$ECS_IPV4\\\" ]}\"                -hcl 'verify_outgoing = true'             -encrypt \"{{resolve:secretsmanager:arn:",
                 {
                   "Ref": "AWS::Partition"
                 },
@@ -1090,6 +1140,11 @@ test('Test extension with custom params', () => {
             "ContainerPath": "/consul/config",
             "ReadOnly": false,
             "SourceVolume": "consul-config"
+          },
+          {
+            "ContainerPath": "/bin/consul-inject",
+            "ReadOnly": false,
+            "SourceVolume": "consul_binary"
           }
         ],
         "Name": "consul-client",
@@ -1111,9 +1166,10 @@ test('Test extension with custom params', () => {
       {
         "Command": [
           "mesh-init",
-          "-envoy-bootstrap-file=/consul/data/envoy-bootstrap.json",
+          "-envoy-bootstrap-dir=/consul/data",
           "-port=3000",
-          "-upstreams="
+          "-upstreams=",
+          "-service-name=name"
         ],
         "Essential": false,
         "Image": "myCustomConsulEcsImage:1.0",
@@ -1135,6 +1191,11 @@ test('Test extension with custom params', () => {
             "ContainerPath": "/consul/data",
             "ReadOnly": false,
             "SourceVolume": "consul-data"
+          },
+          {
+            "ContainerPath": "/bin/consul-inject",
+            "ReadOnly": true,
+            "SourceVolume": "consul_binary"
           }
         ],
         "Name": "consul-ecs-mesh-init",
@@ -1142,6 +1203,8 @@ test('Test extension with custom params', () => {
       },
       {
         "Command": [
+          "/bin/sh",
+          "-c",
           "envoy --config-path /consul/data/envoy-bootstrap.json"
         ],
         "DependsOn": [
@@ -1151,8 +1214,8 @@ test('Test extension with custom params', () => {
           }
         ],
         "EntryPoint": [
-          "/bin/sh",
-          "-c"
+          "/consul/data/consul-ecs",
+          "envoy-entrypoint"
         ],
         "Essential": false,
         "HealthCheck": {
@@ -1204,7 +1267,7 @@ test('Test extension with custom params', () => {
         "Arn"
       ]
     },
-    "Family": "name",
+    "Family": "nametaskdefinition",
     "Memory": "2048",
     "NetworkMode": "awsvpc",
     "RequiresCompatibilities": [
@@ -1223,8 +1286,12 @@ test('Test extension with custom params', () => {
       },
       {
         "Name": "consul-config"
+      },
+      {
+        "Name": "consul_binary"
       }
     ]
+
   }
   ));
   expectCDK(stack).to(haveResource('AWS::ECS::Service', {
@@ -1327,17 +1394,17 @@ const development = new Environment(stack, 'development');
     vpc: production.vpc
   });
 
-  const consulClientSercurityGroup = new ec2.SecurityGroup(stack, 'consulClientSecurityGroup', {
+  const consulClientSecurityGroup = new ec2.SecurityGroup(stack, 'consulClientSecurityGroup', {
     vpc: production.vpc
   });
 
-  consulClientSercurityGroup.addIngressRule(
-    consulClientSercurityGroup,
+  consulClientSecurityGroup.addIngressRule(
+    consulClientSecurityGroup,
     ec2.Port.tcp(8301),
     "allow all the clients in the mesh talk to each other"
   );
-  consulClientSercurityGroup.addIngressRule(
-    consulClientSercurityGroup,
+  consulClientSecurityGroup.addIngressRule(
+    consulClientSecurityGroup,
     ec2.Port.udp(8301),
     "allow all the clients in the mesh talk to each other"
   )
@@ -1351,14 +1418,14 @@ const development = new Environment(stack, 'development');
   }));
 
   nameDescription.add(new ConsulMeshExtension({
-    retryJoin: "provider=aws region=us-west-2 tag_key=Name tag_value=test-consul-server",
+    retryJoin: new RetryJoin({ region: "us-west-2" }),
     consulServerSercurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientImage: "myCustomConsulClientImage:1.0",
     consulEcsImage: "myCustomConsulEcsImage:1.0",
     envoyProxyImage: "myCustomEnvoyImage:1.0",
-    consulClientSercurityGroup,
-    family: "name"
+    consulClientSecurityGroup,
+    serviceDiscoveryName: "name"
   }));
 
   const nameService = new Service(stack, 'name', {
@@ -1376,14 +1443,14 @@ const development = new Environment(stack, 'development');
   }));
 
   greeterDescription.add(new ConsulMeshExtension({
-    retryJoin: "provider=aws region=us-west-2 tag_key=Name tag_value=test-consul-server", // use interface, use ENUMs
+    retryJoin: new RetryJoin({ region: "us-west-2" }),
     consulServerSercurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientImage: "myCustomConsulClientImage:1.0",
     consulEcsImage: "myCustomConsulEcsImage:1.0",
     envoyProxyImage: "myCustomEnvoyImage:1.0",
-    consulClientSercurityGroup,
-    family: "greeter"
+    consulClientSecurityGroup,
+    serviceDiscoveryName: "greeter"
   }));
 
   const greeterService = new Service(stack, 'greeter', {
