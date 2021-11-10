@@ -24,26 +24,50 @@ let environment: {  //environment variable is used to hold the environment detai
 export enum CloudProviders {
     AWS_CLOUDPROVIDER = 'aws',
     HASHICORP_CLOUDPROVIDER = 'hcp'
-  }
-  
+}
+
+export interface RetryJoinProps {
+    /**
+     * Cloud provider of the consul server
+     */
+    provider?: CloudProviders;
+    /**
+     * Region in which your consul server lives
+     */
+    region: string;
+    /**
+     * tag name for the consul server
+     */
+    tagName: string
+    /**
+     * tag value of the consul server i.e. name of the consul server 
+     */
+    tagValue: string;
+}
+
 export class RetryJoin {
-  
-      provider?: CloudProviders;
-      region?: string;
-      tagName?: string
-      tagValue?: string;
-      constructor(props: RetryJoin) {
+
+    provider?: CloudProviders;
+    region?: string;
+    tagName?: string
+    tagValue?: string;
+    constructor(props: RetryJoinProps) {
         this.provider = props.provider || CloudProviders.AWS_CLOUDPROVIDER,
-        this.region = props.region || "us-east-2",
-        this.tagName = props.tagName || "Name",
-        this.tagValue = props.tagValue || "test-consul-server"
-      }
+            this.region = props.region,
+            this.tagName = props.tagName,
+            this.tagValue = props.tagValue
+    }
+
+    public getRetryjoinString(): string {
+        return "provider=" + this.provider + " region=" + this.region + " tag_key="
+            + this.tagName + " tag_value=" + this.tagValue;
+    }
 }
 
 /**
  *  The settings for the Consul Mesh extension
  */
-export interface ConsulMeshProps {
+export interface ECSConsulMeshProps {
 
     /**
      * The cloud auto-join arguemnt to pass to Consul for server discovery
@@ -95,14 +119,14 @@ export interface ConsulMeshProps {
      */
     readonly consulCACert?: secretsmanager.ISecret
 
-     /**
-      * TLS encryption flag
-      */
+    /**
+     * TLS encryption flag
+     */
     readonly tls?: boolean
 
-     /**
-     * Gossip encryption key
-     */
+    /**
+    * Gossip encryption key
+    */
     readonly gossipEncryptKey?: secretsmanager.ISecret;
 
     /**
@@ -113,7 +137,7 @@ export interface ConsulMeshProps {
     /**
      * consul datacenter name
      */
-     readonly consulDatacenter?: string;
+    readonly consulDatacenter?: string;
 }
 
 /**
@@ -121,7 +145,7 @@ export interface ConsulMeshProps {
  * to the task definition and configures them to enable the task to 
  * communicate via the service mesh
  */
-export class ConsulMeshExtension extends ServiceExtension {
+export class ECSConsulMeshExtension extends ServiceExtension {
 
     private retryJoin: RetryJoin;
     private consulServerSercurityGroup: ISecurityGroup;
@@ -148,7 +172,7 @@ export class ConsulMeshExtension extends ServiceExtension {
     private serviceDiscoveryName?: string;
     private consulDatacenter?: string;
 
-    constructor(props: ConsulMeshProps) {
+    constructor(props: ECSConsulMeshProps) {
         super('consul');
         this.retryJoin = props.retryJoin;
         this.consulServerSercurityGroup = props.consulServerSercurityGroup;
@@ -284,18 +308,18 @@ export class ConsulMeshExtension extends ServiceExtension {
             sourceVolume: "consul-data",
             readOnly: false
         },
-        {
-            containerPath: "/bin/consul-inject",
-            sourceVolume: "consul_binary",
-            readOnly: true
-        });
+            {
+                containerPath: "/bin/consul-inject",
+                sourceVolume: "consul_binary",
+                readOnly: true
+            });
 
 
         //Proxy config starts here
         this.container = taskDefinition.addContainer('sidecar-proxy', {
             image: ecs.ContainerImage.fromRegistry(this.envoyProxyImage),
             memoryLimitMiB: 256,
-            entryPoint: [ "/consul/data/consul-ecs", "envoy-entrypoint"],
+            entryPoint: ["/consul/data/consul-ecs", "envoy-entrypoint"],
             command: ["/bin/sh", "-c", "envoy --config-path /consul/data/envoy-bootstrap.json"],
             logging: new ecs.AwsLogDriver({ streamPrefix: 'envoy' }),
             portMappings: [{
@@ -330,15 +354,15 @@ export class ConsulMeshExtension extends ServiceExtension {
     private get buildConsulClientCommand(): string[] {
         let TLSCommand = "";
         let gossipCommand = "";
-        if(this.tls){
-            TLSCommand =  ` \
+        if (this.tls) {
+            TLSCommand = ` \
                -hcl 'ca_file = "/tmp/consul-agent-ca-cert.pem"' \
                -hcl 'auto_encrypt = {tls = true}' \
                -hcl "auto_encrypt = {ip_san = [ \\"$ECS_IPV4\\" ]}" \
                -hcl 'verify_outgoing = true'`;
         }
 
-        if(this.gossipEncryptKey){
+        if (this.gossipEncryptKey) {
             gossipCommand = ` \
             -encrypt "${this.gossipEncryptKey?.secretValue}"`;
         }
@@ -355,7 +379,7 @@ export class ConsulMeshExtension extends ServiceExtension {
                   -hcl 'addresses = { dns = "127.0.0.1" }' \
                   -hcl 'addresses = { grpc = "127.0.0.1" }' \
                   -hcl 'addresses = { http = "127.0.0.1" }' \
-                  -retry-join "provider=${this.retryJoin.provider} region=${this.retryJoin.region} tag_key=${this.retryJoin.tagName} tag_value=${this.retryJoin.tagValue}" \
+                  -retry-join "${this.retryJoin.getRetryjoinString()}" \
                   -hcl 'telemetry { disable_compat_1.9 = true }' \
                   -hcl 'leave_on_terminate = true' \
                   -hcl 'ports { grpc = 8502 }' \
@@ -438,9 +462,9 @@ export class ConsulMeshExtension extends ServiceExtension {
      * @param otherService - The other service to connect to
      */
     public connectToService(otherService: Service) {
-        const otherConsulMesh = otherService.serviceDescription.get('consul') as ConsulMeshExtension;
+        const otherConsulMesh = otherService.serviceDescription.get('consul') as ECSConsulMeshExtension;
 
-        if(otherConsulMesh == undefined){
+        if (otherConsulMesh == undefined) {
             throw new Error(`Upstream service doesn't have consul mesh extension added to it`);
         }
 
@@ -460,16 +484,16 @@ export class ConsulMeshExtension extends ServiceExtension {
             `Accept inbound traffic from ${this.parentService.id}`,
         );
 
-        const upstreamName = otherConsulMesh.serviceDiscoveryName? otherConsulMesh.serviceDiscoveryName : otherService.ecsService.taskDefinition.family;
+        const upstreamName = otherConsulMesh.serviceDiscoveryName ?? otherService.ecsService.taskDefinition.family;
 
         this.upstreamStringArray.push(upstreamName + ":" + this.upstreamPort);
 
         var cfnTaskDefinition = this.parentService?.ecsService?.taskDefinition?.node.defaultChild as ecs.CfnTaskDefinition;
 
-        if(cfnTaskDefinition == undefined){
+        if (cfnTaskDefinition == undefined) {
             throw new Error(`The task definition is not defined`);
         }
-       
+
         //Override command for consul-mesh-init-container here to have upstream details as we only use connectTo()
         //to add upstream details
         cfnTaskDefinition.addPropertyOverride('ContainerDefinitions.2.Command', ["mesh-init",

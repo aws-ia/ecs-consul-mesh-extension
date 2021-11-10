@@ -2,7 +2,7 @@ import { expect as expectCDK, haveResource } from '@aws-cdk/assert';
 import * as cdk from '@aws-cdk/core';
 import { Environment, ServiceDescription, Container, Service } from '@aws-cdk-containers/ecs-service-extensions';
 import * as ecs from '@aws-cdk/aws-ecs';
-import { ConsulMeshExtension, RetryJoin } from '../lib/consul-mesh-extension'
+import { ECSConsulMeshExtension, RetryJoin } from '../lib/consul-mesh-extension'
 import * as ec2 from '@aws-cdk/aws-ec2';
 import { Stack } from '@aws-cdk/core';
 import * as secretsmanager from '@aws-cdk/aws-secretsmanager';
@@ -53,8 +53,8 @@ test('Test extension with default params', () => {
     image: ecs.ContainerImage.fromRegistry('nathanpeck/name')
   }));
 
-  nameDescription.add(new ConsulMeshExtension({
-    retryJoin: new RetryJoin({ region: "us-west-2" }),
+  nameDescription.add(new ECSConsulMeshExtension({
+    retryJoin: new RetryJoin({ region: "us-west-2", tagName: "Name", tagValue: "test-consul-server" }),
     consulServerSercurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientSecurityGroup,
@@ -78,8 +78,8 @@ test('Test extension with default params', () => {
     image: ecs.ContainerImage.fromRegistry('nathanpeck/greeter')
   }));
 
-  greeterDescription.add(new ConsulMeshExtension({
-    retryJoin: new RetryJoin({ region: "us-west-2" }),
+  greeterDescription.add(new ECSConsulMeshExtension({
+    retryJoin: new RetryJoin({ region: "us-west-2", tagName: "Name", tagValue: "test-consul-server" }),
     consulServerSercurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientSecurityGroup,
@@ -738,8 +738,8 @@ test('Test extension with custom params', () => {
     image: ecs.ContainerImage.fromRegistry('nathanpeck/name')
   }));
 
-  nameDescription.add(new ConsulMeshExtension({
-    retryJoin: new RetryJoin({ region: "us-west-2" }),
+  nameDescription.add(new ECSConsulMeshExtension({
+    retryJoin: new RetryJoin({ region: "us-west-2", tagName: "Name", tagValue: "test-consul-server" }),
     consulServerSercurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientImage: "myCustomConsulClientImage:1.0",
@@ -766,8 +766,8 @@ test('Test extension with custom params', () => {
     image: ecs.ContainerImage.fromRegistry('nathanpeck/greeter')
   }));
 
-  greeterDescription.add(new ConsulMeshExtension({
-    retryJoin: new RetryJoin({ region: "us-west-2" }),
+  greeterDescription.add(new ECSConsulMeshExtension({
+    retryJoin: new RetryJoin({ region: "us-west-2", tagName: "Name", tagValue: "test-consul-server" }),
     consulServerSercurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientImage: "myCustomConsulClientImage:1.0",
@@ -1417,8 +1417,8 @@ const development = new Environment(stack, 'development');
     image: ecs.ContainerImage.fromRegistry('nathanpeck/name')
   }));
 
-  nameDescription.add(new ConsulMeshExtension({
-    retryJoin: new RetryJoin({ region: "us-west-2" }),
+  nameDescription.add(new ECSConsulMeshExtension({
+    retryJoin: new RetryJoin({ region: "us-west-2", tagName: "Name", tagValue: "test-consul-server" }),
     consulServerSercurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientImage: "myCustomConsulClientImage:1.0",
@@ -1442,8 +1442,8 @@ const development = new Environment(stack, 'development');
     image: ecs.ContainerImage.fromRegistry('nathanpeck/greeter')
   }));
 
-  greeterDescription.add(new ConsulMeshExtension({
-    retryJoin: new RetryJoin({ region: "us-west-2" }),
+  greeterDescription.add(new ECSConsulMeshExtension({
+    retryJoin: new RetryJoin({ region: "us-west-2", tagName: "Name", tagValue: "test-consul-server" }),
     consulServerSercurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientImage: "myCustomConsulClientImage:1.0",
