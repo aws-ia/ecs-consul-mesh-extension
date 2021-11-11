@@ -2,7 +2,7 @@ import { expect as expectCDK, haveResource } from '@aws-cdk/assert';
 import * as cdk from '@aws-cdk/core';
 import { Environment, ServiceDescription, Container, Service } from '@aws-cdk-containers/ecs-service-extensions';
 import * as ecs from '@aws-cdk/aws-ecs';
-import { ConsulMeshExtension } from '../../consul-extension/lib/consul-mesh-extension';
+import { ConsulMeshExtension } from '../lib/consul-mesh-extension';
 import * as ec2 from '@aws-cdk/aws-ec2';
 import { Stack } from '@aws-cdk/core';
 import * as secretsmanager from '@aws-cdk/aws-secretsmanager';
