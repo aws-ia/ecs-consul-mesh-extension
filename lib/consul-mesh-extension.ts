@@ -45,7 +45,11 @@ export interface RetryJoinProps {
     tagValue: string;
 }
 
-export class RetryJoin {
+export interface IRetryJoin{
+    getRetryjoinString(): string;
+}
+
+export class RetryJoin implements IRetryJoin{
 
     provider?: CloudProviders;
     region?: string;
@@ -72,7 +76,7 @@ export interface ECSConsulMeshProps {
     /**
      * The cloud auto-join arguemnt to pass to Consul for server discovery
      */
-    readonly retryJoin: RetryJoin;
+    readonly retryJoin: IRetryJoin;
 
     /**
      * The security group of the consul servers to which this extension 
@@ -147,7 +151,7 @@ export interface ECSConsulMeshProps {
  */
 export class ECSConsulMeshExtension extends ServiceExtension {
 
-    private retryJoin: RetryJoin;
+    private retryJoin: IRetryJoin;
     private consulServerSercurityGroup: ISecurityGroup;
     private port: number;
     private consulClientImage: string;
