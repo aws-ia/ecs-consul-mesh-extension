@@ -82,7 +82,7 @@ export interface ECSConsulMeshProps {
      * The security group of the consul servers to which this extension 
      * should be configured to connect
      */
-    readonly consulServerSercurityGroup: ISecurityGroup;
+    readonly consulServerSecurityGroup: ISecurityGroup;
 
     /**
      * Port that the application listens on
@@ -152,12 +152,12 @@ export interface ECSConsulMeshProps {
 export class ECSConsulMeshExtension extends ServiceExtension {
 
     private retryJoin: IRetryJoin;
-    private consulServerSercurityGroup: ISecurityGroup;
+    private consulServerSecurityGroup: ISecurityGroup;
     private port: number;
     private consulClientImage: string;
     private envoyProxyImage: string;
     private consulEcsImage: string;
-    private consulClientSercurityGroup: ISecurityGroup;
+    private consulClientSecurityGroup: ISecurityGroup;
     private meshInit: ecs.ContainerDefinition;
     private upstreamPort: number;
     private upstreamStringArray: string[] = [];  //upstream string array is used to store the upstream records
@@ -179,12 +179,12 @@ export class ECSConsulMeshExtension extends ServiceExtension {
     constructor(props: ECSConsulMeshProps) {
         super('consul');
         this.retryJoin = props.retryJoin;
-        this.consulServerSercurityGroup = props.consulServerSercurityGroup;
+        this.consulServerSecurityGroup = props.consulServerSecurityGroup;
         this.port = props.port || 0;
         this.consulClientImage = props.consulClientImage || CONSUL_CONTAINER_IMAGE;
         this.envoyProxyImage = props.envoyProxyImage || ENVOY_CONTAINER_IMAGE;
         this.consulEcsImage = props.consulEcsImage || CONSUL_ECS_CONTAINER_IMAGE;
-        this.consulClientSercurityGroup = props.consulClientSecurityGroup;
+        this.consulClientSecurityGroup = props.consulClientSecurityGroup;
         this.upstreamPort = 3001;
         this.tls = props.tls || false;
         this.consulCACert = props.consulCACert;
@@ -423,25 +423,25 @@ export class ECSConsulMeshExtension extends ServiceExtension {
      */
     public useService(service: ecs.Ec2Service | ecs.FargateService) {
 
-        this.consulServerSercurityGroup.connections.allowFrom(service.connections.securityGroups[0], Port.tcp(8301), 'allow consul server to accept traffic from consul client on TCP port 8301');
-        this.consulServerSercurityGroup.connections.allowFrom(service.connections.securityGroups[0], Port.udp(8301), 'allow consul server to accept traffic from consul client on UDP port 8301');
-        this.consulServerSercurityGroup.connections.allowFrom(service.connections.securityGroups[0], Port.tcp(8300), 'allow consul server to accept traffic from the service client on TCP port 8300');
+        this.consulServerSecurityGroup.connections.allowFrom(service.connections.securityGroups[0], Port.tcp(8301), 'allow consul server to accept traffic from consul client on TCP port 8301');
+        this.consulServerSecurityGroup.connections.allowFrom(service.connections.securityGroups[0], Port.udp(8301), 'allow consul server to accept traffic from consul client on UDP port 8301');
+        this.consulServerSecurityGroup.connections.allowFrom(service.connections.securityGroups[0], Port.tcp(8300), 'allow consul server to accept traffic from the service client on TCP port 8300');
 
         service.connections.securityGroups[0].addIngressRule(
-            this.consulServerSercurityGroup.connections.securityGroups[0],
+            this.consulServerSecurityGroup.connections.securityGroups[0],
             Port.tcp(8301),
             'allow service to accept traffic from consul server on tcp port 8301'
         );
 
         service.connections.securityGroups[0].addIngressRule(
-            this.consulServerSercurityGroup.connections.securityGroups[0],
+            this.consulServerSecurityGroup.connections.securityGroups[0],
             Port.udp(8301),
             'allow service to accept traffic from consul server on udp port 8301 '
         );
 
         const serviceSecurityGroupIds = service.connections.securityGroups.map(sg => sg.securityGroupId);
 
-        serviceSecurityGroupIds.push(this.consulClientSercurityGroup.securityGroupId);
+        serviceSecurityGroupIds.push(this.consulClientSecurityGroup.securityGroupId);
 
         if (serviceSecurityGroupIds.length > maxSecurityGroupLimit) {
             throw new Error('Cannot have more than 5 security groups associated with the service');

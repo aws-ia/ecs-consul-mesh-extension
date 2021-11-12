@@ -55,7 +55,7 @@ test('Test extension with default params', () => {
 
   nameDescription.add(new ECSConsulMeshExtension({
     retryJoin: new RetryJoin({ region: "us-west-2", tagName: "Name", tagValue: "test-consul-server" }),
-    consulServerSercurityGroup: consulSecurityGroup,
+    consulServerSecurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientSecurityGroup,
     tls: true,
@@ -80,7 +80,7 @@ test('Test extension with default params', () => {
 
   greeterDescription.add(new ECSConsulMeshExtension({
     retryJoin: new RetryJoin({ region: "us-west-2", tagName: "Name", tagValue: "test-consul-server" }),
-    consulServerSercurityGroup: consulSecurityGroup,
+    consulServerSecurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientSecurityGroup,
     tls: true,
@@ -740,7 +740,7 @@ test('Test extension with custom params', () => {
 
   nameDescription.add(new ECSConsulMeshExtension({
     retryJoin: new RetryJoin({ region: "us-west-2", tagName: "Name", tagValue: "test-consul-server" }),
-    consulServerSercurityGroup: consulSecurityGroup,
+    consulServerSecurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientImage: "myCustomConsulClientImage:1.0",
     consulEcsImage: "myCustomConsulEcsImage:1.0",
@@ -768,7 +768,7 @@ test('Test extension with custom params', () => {
 
   greeterDescription.add(new ECSConsulMeshExtension({
     retryJoin: new RetryJoin({ region: "us-west-2", tagName: "Name", tagValue: "test-consul-server" }),
-    consulServerSercurityGroup: consulSecurityGroup,
+    consulServerSecurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientImage: "myCustomConsulClientImage:1.0",
     consulEcsImage: "myCustomConsulEcsImage:1.0",
@@ -1419,7 +1419,7 @@ const development = new Environment(stack, 'development');
 
   nameDescription.add(new ECSConsulMeshExtension({
     retryJoin: new RetryJoin({ region: "us-west-2", tagName: "Name", tagValue: "test-consul-server" }),
-    consulServerSercurityGroup: consulSecurityGroup,
+    consulServerSecurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientImage: "myCustomConsulClientImage:1.0",
     consulEcsImage: "myCustomConsulEcsImage:1.0",
@@ -1444,7 +1444,7 @@ const development = new Environment(stack, 'development');
 
   greeterDescription.add(new ECSConsulMeshExtension({
     retryJoin: new RetryJoin({ region: "us-west-2", tagName: "Name", tagValue: "test-consul-server" }),
-    consulServerSercurityGroup: consulSecurityGroup,
+    consulServerSecurityGroup: consulSecurityGroup,
     port: 3000,
     consulClientImage: "myCustomConsulClientImage:1.0",
     consulEcsImage: "myCustomConsulEcsImage:1.0",
