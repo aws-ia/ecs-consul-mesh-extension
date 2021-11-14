@@ -488,7 +488,9 @@ export class ECSConsulMeshExtension extends ServiceExtension {
             `Accept inbound traffic from ${this.parentService.id}`,
         );
 
-        this.upstreamStringArray.push((otherConsulMesh.serviceDiscoveryName ?? otherService.ecsService.taskDefinition.family) + ":" + this.upstreamPort);
+        const upstreamName = otherConsulMesh.serviceDiscoveryName ?? otherService.ecsService.taskDefinition.family;
+
+        this.upstreamStringArray.push(upstreamName + ":" + this.upstreamPort);
 
         var cfnTaskDefinition = this.parentService?.ecsService?.taskDefinition?.node.defaultChild as ecs.CfnTaskDefinition;
 
@@ -511,7 +513,7 @@ export class ECSConsulMeshExtension extends ServiceExtension {
             }
         }
 
-        this.parentServiceEnvironments.push({ Name: (otherConsulMesh.serviceDiscoveryName?.toUpperCase() ?? otherService.ecsService.taskDefinition.family.toUpperCase()) + '_URL', Value: 'http://localhost:' + this.upstreamPort++ })
+        this.parentServiceEnvironments.push({ Name: upstreamName.toUpperCase() + '_URL', Value: 'http://localhost:' + this.upstreamPort++ })
 
         //Also add required environment variables
         cfnTaskDefinition.addPropertyOverride('ContainerDefinitions.0.Environment', Array.from(this.parentServiceEnvironments.values()));
