@@ -28,3 +28,23 @@ Terms / Glossary
 
 
 In order to explain how ECS Consul Service Mesh works please go through the [greeter application]()
+
+### Example
+
+```
+import { ECSConsulMeshExtension, RetryJoin } from '@aws-quickstart/ecs-consul-mesh-extension';
+
+const nameDescription = new ServiceDescription();
+nameDescription.add(new ECSConsulMeshExtension({      
+      retryJoin: new RetryJoin({ region: '$AWS_REGION', tagName: 'Name', tagValue: 'test-consul-server' }),
+      port: 3000,
+      consulClientSecurityGroup: consulClientSecurityGroup,
+      consulServerSecurityGroup: consulServerSecurityGroup,
+      consulCACert: agentCASecret,
+      gossipEncryptKey: gossipSecret,
+      tls: true,
+      serviceDiscoveryName: 'name',
+      consulDatacenter: 'dc1',
+    }));
+    
+```
