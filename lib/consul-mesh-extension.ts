@@ -6,7 +6,8 @@ import {
     ServiceExtension,
     Service,
     Container,
-    ContainerMutatingHook
+    ContainerMutatingHook,
+    connectToProps
 } from '@aws-cdk-containers/ecs-service-extensions';
 import * as secretsmanager from '@aws-cdk/aws-secretsmanager'
 
@@ -465,7 +466,7 @@ export class ECSConsulMeshExtension extends ServiceExtension {
      * 
      * @param otherService - The other service to connect to
      */
-    public connectToService(otherService: Service) {
+    public connectToService(otherService: Service, connectToProps: connectToProps) {
         const otherConsulMesh = otherService.serviceDescription.get('consul') as ECSConsulMeshExtension;
 
         if (otherConsulMesh == undefined) {
@@ -490,7 +491,7 @@ export class ECSConsulMeshExtension extends ServiceExtension {
 
         const upstreamName = otherConsulMesh.serviceDiscoveryName ?? otherService.ecsService.taskDefinition.family;
 
-        this.upstreamStringArray.push(upstreamName + ":" + this.upstreamPort);
+        this.upstreamStringArray.push(upstreamName + ":" + (connectToProps?.local_bind_port ?? this.upstreamPort));
 
         var cfnTaskDefinition = this.parentService?.ecsService?.taskDefinition?.node.defaultChild as ecs.CfnTaskDefinition;
 
@@ -513,7 +514,7 @@ export class ECSConsulMeshExtension extends ServiceExtension {
             }
         }
 
-        this.parentServiceEnvironments.push({ Name: upstreamName.toUpperCase() + '_URL', Value: 'http://localhost:' + this.upstreamPort++ })
+        this.parentServiceEnvironments.push({ Name: upstreamName.toUpperCase() + '_URL', Value: 'http://localhost:' + (connectToProps?.local_bind_port ?? this.upstreamPort++)})
 
         //Also add required environment variables
         cfnTaskDefinition.addPropertyOverride('ContainerDefinitions.0.Environment', Array.from(this.parentServiceEnvironments.values()));
