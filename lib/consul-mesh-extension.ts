@@ -189,7 +189,7 @@ export class ECSConsulMeshExtension extends ServiceExtension {
         this.tls = props.tls || false;
         this.consulCACert = props.consulCACert;
         this.gossipEncryptKey = props.gossipEncryptKey;
-        this.serviceDiscoveryName = props.serviceDiscoveryName || "";
+        this.serviceDiscoveryName = props.serviceDiscoveryName;
         this.consulDatacenter = props.consulDatacenter || "dc1";
     }
 
