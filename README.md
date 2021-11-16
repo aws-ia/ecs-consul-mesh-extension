@@ -3,7 +3,7 @@
 This repo provides CDK service extension to deploy consul service mesh on ECS.
 
 ## Background
-Currently,in order to create services using CDK stack that joins consul service mesh (https://www.consul.io/docs/connect) we need ever growing monolithic collection of code (https://github.com/aws-samples/amazon-ecs-fargate-consul-connect-example). Every time when customer needs to add their services to the consul service mesh they need to configure sidecars such as proxy container and agent container in the same VPC as consul connect lives. Creating these sidecars for every new service creates an overhead on customers to allow their services to join service mesh. 
+Currently,in order to create services using CDK stack that joins [consul service mesh](https://www.consul.io/docs/connect) we need [ever growing monolithic collection of code](https://github.com/aws-samples/amazon-ecs-fargate-consul-connect-example). Every time when customer needs to add their services to the consul service mesh they need to configure sidecars such as proxy container and agent container in the same VPC as consul connect lives. Creating these sidecars for every new service creates an overhead on customers to allow their services to join service mesh. 
 
 ## Goals
 The goal here is to allow services to join consul service mesh by configuring envoy proxy, consul agent and mesh-init sidecars as a part of consul connect extension. Customers will only give their application code and few more configurations such as cpu, consul server security group, TLS and Gossip secrets, and everything else will take care by the ECS Consul Mesh extension
@@ -27,7 +27,7 @@ Terms / Glossary
 *Application Container* - Application container will have application code and configurations required for the application to work
 
 
-In order to explain how ECS Consul Service Mesh works please go through the [greeter application]()
+In order to explain how ECS Consul Service Mesh works please go through the [greeter application](https://github.com/aws-samples/amazon-ecs-fargate-consul-connect-example/tree/main/cdk)
 
 ### Example
 
