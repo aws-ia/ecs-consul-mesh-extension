@@ -94,7 +94,7 @@ test('Test extension with default params', () => {
     serviceDescription: greeterDescription
   });
 
-  greeterService.connectTo(nameService)
+  greeterService.connectTo(nameService, { local_bind_port: 8080})
 
   //THEN
   expectCDK(stack).to(haveResource('AWS::ECS::TaskDefinition', {
@@ -114,7 +114,7 @@ test('Test extension with default params', () => {
         "Environment": [
           {
             "Name": "NAME_URL",
-            "Value": "http://localhost:3001"
+            "Value": "http://localhost:8080"
           }
         ],
         "Essential": true,
@@ -227,7 +227,7 @@ test('Test extension with default params', () => {
           "mesh-init",
           "-envoy-bootstrap-dir=/consul/data",
           "-port=3000",
-          "-upstreams=name:3001",
+          "-upstreams=name:8080",
           "-service-name=greeter"
         ],
         "Essential": false,
