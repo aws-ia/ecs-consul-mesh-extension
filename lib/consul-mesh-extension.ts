@@ -14,9 +14,9 @@ import * as secretsmanager from '@aws-cdk/aws-secretsmanager'
 /**
  * envoy, consul and consul-ecs container images
  */
-const CONSUL_CONTAINER_IMAGE = 'hashicorp/consul:1.9.5';
-const CONSUL_ECS_CONTAINER_IMAGE = 'hashicorpdev/consul-ecs:latest';
-const ENVOY_CONTAINER_IMAGE = 'envoyproxy/envoy-alpine:v1.16.2';
+const CONSUL_CONTAINER_IMAGE = 'hashicorp/consul:1.10.4';
+const CONSUL_ECS_CONTAINER_IMAGE = 'hashicorp/consul-ecs:0.2.0';
+const ENVOY_CONTAINER_IMAGE = 'envoyproxy/envoy-alpine:v1.18.4';
 const maxSecurityGroupLimit = 5;
 let environment: {  //environment variable is used to hold the environment details from app container
     [key: string]: string;

@@ -175,7 +175,7 @@ test('Test extension with default params', () => {
           "-ec"
         ],
         "Essential": false,
-        "Image": "hashicorp/consul:1.9.5",
+        "Image": "hashicorp/consul:1.10.4",
         "LogConfiguration": {
           "LogDriver": "awslogs",
           "Options": {
@@ -231,7 +231,7 @@ test('Test extension with default params', () => {
           "-service-name=greeter"
         ],
         "Essential": false,
-        "Image": "hashicorpdev/consul-ecs:latest",
+        "Image": "hashicorp/consul-ecs:0.2.0",
         "LogConfiguration": {
           "LogDriver": "awslogs",
           "Options": {
@@ -289,7 +289,7 @@ test('Test extension with default params', () => {
           "Retries": 3,
           "Timeout": 5
         },
-        "Image": "envoyproxy/envoy-alpine:v1.16.2",
+        "Image": "envoyproxy/envoy-alpine:v1.18.4",
         "LogConfiguration": {
           "LogDriver": "awslogs",
           "Options": {
@@ -426,7 +426,7 @@ test('Test extension with default params', () => {
           "-ec"
         ],
         "Essential": false,
-        "Image": "hashicorp/consul:1.9.5",
+        "Image": "hashicorp/consul:1.10.4",
         "LogConfiguration": {
           "LogDriver": "awslogs",
           "Options": {
@@ -482,7 +482,7 @@ test('Test extension with default params', () => {
           "-service-name=name"
         ],
         "Essential": false,
-        "Image": "hashicorpdev/consul-ecs:latest",
+        "Image": "hashicorp/consul-ecs:0.2.0",
         "LogConfiguration": {
           "LogDriver": "awslogs",
           "Options": {
@@ -540,7 +540,7 @@ test('Test extension with default params', () => {
           "Retries": 3,
           "Timeout": 5
         },
-        "Image": "envoyproxy/envoy-alpine:v1.16.2",
+        "Image": "envoyproxy/envoy-alpine:v1.18.4",
         "LogConfiguration": {
           "LogDriver": "awslogs",
           "Options": {
