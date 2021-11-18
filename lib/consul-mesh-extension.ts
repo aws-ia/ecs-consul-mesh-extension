@@ -137,7 +137,7 @@ export interface ECSConsulMeshProps {
     /**
      * Service discovery name of the service
      */
-    readonly serviceDiscoveryName?: string;
+    readonly serviceDiscoveryName: string;
 
     /**
      * consul datacenter name
@@ -174,7 +174,7 @@ export class ECSConsulMeshExtension extends ServiceExtension {
     private consulCACert?: secretsmanager.ISecret;
     private tls?: boolean;
     private gossipEncryptKey?: secretsmanager.ISecret;
-    private serviceDiscoveryName?: string;
+    private serviceDiscoveryName: string;
     private consulDatacenter?: string;
 
     constructor(props: ECSConsulMeshProps) {
@@ -489,7 +489,7 @@ export class ECSConsulMeshExtension extends ServiceExtension {
             `Accept inbound traffic from ${this.parentService.id}`,
         );
 
-        const upstreamName = otherConsulMesh.serviceDiscoveryName ?? otherService.ecsService.taskDefinition.family;
+        const upstreamName = otherConsulMesh.serviceDiscoveryName;
 
         this.upstreamStringArray.push(upstreamName + ":" + (connectToProps.local_bind_port ?? this.upstreamPort));
 
