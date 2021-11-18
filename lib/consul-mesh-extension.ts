@@ -86,13 +86,6 @@ export interface ECSConsulMeshProps {
     readonly consulServerSecurityGroup: ISecurityGroup;
 
     /**
-     * Port that the application listens on
-     * 
-     * @default 0
-     */
-    readonly port?: number;
-
-    /**
      * Consul container image.
      * 
      * @default hashicorp/consul:1.9.5
@@ -154,7 +147,6 @@ export class ECSConsulMeshExtension extends ServiceExtension {
 
     private retryJoin: IRetryJoin;
     private consulServerSecurityGroup: ISecurityGroup;
-    private port: number;
     private consulClientImage: string;
     private envoyProxyImage: string;
     private consulEcsImage: string;
@@ -181,7 +173,6 @@ export class ECSConsulMeshExtension extends ServiceExtension {
         super('consul');
         this.retryJoin = props.retryJoin;
         this.consulServerSecurityGroup = props.consulServerSecurityGroup;
-        this.port = props.port || 0;
         this.consulClientImage = props.consulClientImage || CONSUL_CONTAINER_IMAGE;
         this.envoyProxyImage = props.envoyProxyImage || ENVOY_CONTAINER_IMAGE;
         this.consulEcsImage = props.consulEcsImage || CONSUL_ECS_CONTAINER_IMAGE;
@@ -225,6 +216,12 @@ export class ECSConsulMeshExtension extends ServiceExtension {
      * @param taskDefinition The created task definition to add containers to
      */
     public useTaskDefinition(taskDefinition: ecs.TaskDefinition) {
+
+        const serviceContainer = this.parentService.serviceDescription.get('service-container') as Container;
+
+        if(serviceContainer == undefined){
+            throw new Error(`Cannot find service-container`);
+        }
 
         new Policy(this.scope, `task-role-${this.parentService.id}`, {
             roles: [taskDefinition.taskRole],
@@ -300,7 +297,7 @@ export class ECSConsulMeshExtension extends ServiceExtension {
             memoryLimitMiB: 256,
             command: ["mesh-init",
                 "-envoy-bootstrap-dir=/consul/data",
-                "-port=" + this.port,
+                "-port=" + serviceContainer.trafficPort,
                 "-upstreams=" + this.buildUpstreamString,
                 "-service-name=" + this.serviceDiscoveryName],
             logging: new ecs.AwsLogDriver({ streamPrefix: 'consul-ecs-mesh-init' }),
@@ -468,6 +465,11 @@ export class ECSConsulMeshExtension extends ServiceExtension {
      */
     public connectToService(otherService: Service, connectToProps: ConnectToProps = {}) {
         const otherConsulMesh = otherService.serviceDescription.get('consul') as ECSConsulMeshExtension;
+        const serviceContainer = this.parentService.serviceDescription.get('service-container') as Container;
+
+        if(serviceContainer == undefined){
+            throw new Error(`Cannot find service-container`);
+        }
 
         if (otherConsulMesh == undefined) {
             throw new Error(`Upstream service doesn't have consul mesh extension added to it`);
@@ -503,7 +505,7 @@ export class ECSConsulMeshExtension extends ServiceExtension {
         //to add upstream details
         cfnTaskDefinition.addPropertyOverride('ContainerDefinitions.2.Command', ["mesh-init",
             "-envoy-bootstrap-dir=/consul/data",
-            "-port=" + this.port,
+            "-port=" + serviceContainer.trafficPort,
             "-upstreams=" + this.buildUpstreamString,
             "-service-name=" + this.serviceDiscoveryName]);
 
