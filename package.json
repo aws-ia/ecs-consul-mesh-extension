@@ -1,6 +1,6 @@
 {
   "name": "@aws-quickstart/ecs-consul-mesh-extension",
-  "version": "0.2.14",
+  "version": "1.0.0",
   "description": "An Amazon ECS service extension for Consul",
   "scripts": {
     "build": "tsc",
@@ -17,16 +17,16 @@
   "author": "Amazon Web Services",
   "license": "Apache-2.0",
   "dependencies": {
-    "@aws-cdk-containers/ecs-service-extensions": "^1.124.0",
-    "@aws-cdk/aws-ec2": "^1.124.0",
-    "@aws-cdk/core": "^1.124.0",
+    "@aws-cdk-containers/ecs-service-extensions": "^1.133.0",
+    "@aws-cdk/aws-ec2": "^1.133.0",
+    "@aws-cdk/core": "^1.133.0",
     "source-map-support": "^0.5.16"
   },
   "devDependencies": {
-    "@aws-cdk/assert": "^1.124.0",
+    "@aws-cdk/assert": "^1.133.0",
     "@types/jest": "^27.0.2",
     "@types/node": "^16.10.1",
-    "aws-cdk": "^1.132.0",
+    "aws-cdk": "^1.133.0",
     "jest": "^27.3.1",
     "ts-jest": "^27.0.5",
     "ts-node": "^10.2.1",
