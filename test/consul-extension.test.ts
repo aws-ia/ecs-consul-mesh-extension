@@ -314,6 +314,13 @@ test('Test extension with default params', () => {
             "ContainerPort": 20000,
             "Protocol": "tcp"
           }
+        ],
+        "Ulimits": [
+          {
+            "HardLimit": 1048576,
+            "Name": "nofile",
+            "SoftLimit": 1048576
+          }
         ]
       }
     ],
@@ -564,6 +571,13 @@ test('Test extension with default params', () => {
           {
             "ContainerPort": 20000,
             "Protocol": "tcp"
+          }
+        ],
+        "Ulimits": [
+          {
+            "HardLimit": 1048576,
+            "Name": "nofile",
+            "SoftLimit": 1048576
           }
         ]
       }
@@ -1003,6 +1017,13 @@ test('Test extension with custom params', () => {
             "ContainerPort": 20000,
             "Protocol": "tcp"
           }
+        ],
+        "Ulimits": [
+          {
+            "HardLimit": 1048576,
+            "Name": "nofile",
+            "SoftLimit": 1048576
+          }
         ]
       }
     ],
@@ -1252,6 +1273,13 @@ test('Test extension with custom params', () => {
           {
             "ContainerPort": 20000,
             "Protocol": "tcp"
+          }
+        ],
+        "Ulimits": [
+          {
+            "HardLimit": 1048576,
+            "Name": "nofile",
+            "SoftLimit": 1048576
           }
         ]
       }

@@ -337,6 +337,17 @@ export class ECSConsulMeshExtension extends ServiceExtension {
             essential: false
         });
 
+        this.container.addUlimits(
+            {
+                name: ecs.UlimitName.NOFILE,
+                // Note: 2^20 (1048576) is the maximum.
+                // Going higher would need sysctl settings: https://github.com/aws/containers-roadmap/issues/460.
+                // AWS API will accept invalid values, and you will see a CannotStartContainerError at runtime.
+                softLimit: 1048576,
+                hardLimit: 1048576
+            }
+        );
+
         this.container.addContainerDependencies(
             {
                 container: this.meshInit,
