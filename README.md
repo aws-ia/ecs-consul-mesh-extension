@@ -36,8 +36,7 @@ import { ECSConsulMeshExtension, RetryJoin } from '@aws-quickstart/ecs-consul-me
 
 const nameDescription = new ServiceDescription();
 nameDescription.add(new ECSConsulMeshExtension({      
-      retryJoin: new RetryJoin({ region: '$AWS_REGION', tagName: 'Name', tagValue: 'test-consul-server' }),
-      port: 3000,
+      retryJoin: new RetryJoin({ region: '$AWS_REGION', tagName: '$TAG_NAME', tagValue: '$TAG_VALUE' }),
       consulClientSecurityGroup: consulClientSecurityGroup,
       consulServerSecurityGroup: consulServerSecurityGroup,
       consulCACert: agentCASecret,
