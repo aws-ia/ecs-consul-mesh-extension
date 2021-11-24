@@ -301,8 +301,7 @@ export class ECSConsulMeshExtension extends ServiceExtension {
                 "-upstreams=" + this.buildUpstreamString,
                 "-service-name=" + this.serviceDiscoveryName],
             logging: new ecs.AwsLogDriver({ streamPrefix: 'consul-ecs-mesh-init' }),
-            essential: false,
-            user: "root" // TODO: check if this permission is required
+            essential: false
         });
 
         this.meshInit.addMountPoints({
