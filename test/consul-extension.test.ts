@@ -255,8 +255,7 @@ test('Test extension with default params', () => {
             "SourceVolume": "consul_binary"
           }
         ],
-        "Name": "consul-ecs-mesh-init",
-        "User": "root"
+        "Name": "consul-ecs-mesh-init"
       },
       {
         "Command": [
@@ -513,8 +512,7 @@ test('Test extension with default params', () => {
             "SourceVolume": "consul_binary"
           }
         ],
-        "Name": "consul-ecs-mesh-init",
-        "User": "root"
+        "Name": "consul-ecs-mesh-init"
       },
       {
         "Command": [
@@ -958,8 +956,7 @@ test('Test extension with custom params', () => {
             "SourceVolume": "consul_binary"
           }
         ],
-        "Name": "consul-ecs-mesh-init",
-        "User": "root"
+        "Name": "consul-ecs-mesh-init"
       },
       {
         "Command": [
@@ -1215,8 +1212,7 @@ test('Test extension with custom params', () => {
             "SourceVolume": "consul_binary"
           }
         ],
-        "Name": "consul-ecs-mesh-init",
-        "User": "root"
+        "Name": "consul-ecs-mesh-init"
       },
       {
         "Command": [
