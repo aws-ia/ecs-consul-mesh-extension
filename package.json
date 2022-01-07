@@ -1,6 +1,6 @@
 {
   "name": "@aws-quickstart/ecs-consul-mesh-extension",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "An Amazon ECS service extension for Consul",
   "scripts": {
     "build": "tsc",

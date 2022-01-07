@@ -27,9 +27,20 @@ export enum CloudProviders {
     HASHICORP_CLOUDPROVIDER = 'hcp'
 }
 
+export interface ContainerMutatingProps {
+    /**
+     * Application Container Health Checks
+     * 
+     * @default - No Application Container Health Checks
+     */
+    readonly healthCheck?: ecs.HealthCheck;
+}
+
 export interface RetryJoinProps {
     /**
      * Cloud provider of the consul server
+     * 
+     * @default CloudProviders.AWS_CLOUDPROVIDER
      */
     provider?: CloudProviders;
     /**
@@ -88,21 +99,21 @@ export interface ECSConsulMeshProps {
     /**
      * Consul container image.
      * 
-     * @default hashicorp/consul:1.9.5
+     * @default "hashicorp/consul:1.10.4"
      */
     readonly consulClientImage?: string;
 
     /**
      * Envoy container image.
      * 
-     * @default envoyproxy/envoy-alpine:v1.16.2
+     * @default "envoyproxy/envoy-alpine:v1.18.4"
      */
     readonly envoyProxyImage?: string;
 
     /**
      * consul-ecs container image.
      * 
-     * @default hashicorp/consul-ecs:0.1.2
+     * @default "hashicorp/consul-ecs:0.2.0"
      */
     readonly consulEcsImage?: string;
 
@@ -114,16 +125,22 @@ export interface ECSConsulMeshProps {
 
     /**
      * Consul CA certificate 
+     * 
+     * @default -  No Consul CA Certificate
      */
     readonly consulCACert?: secretsmanager.ISecret
 
     /**
      * TLS encryption flag
+     * 
+     * @default - false
      */
     readonly tls?: boolean
 
     /**
     * Gossip encryption key
+    * 
+    * @default - No Gossip Encryption Key
     */
     readonly gossipEncryptKey?: secretsmanager.ISecret;
 
@@ -134,8 +151,31 @@ export interface ECSConsulMeshProps {
 
     /**
      * consul datacenter name
+     * 
+     * @default "dc1"
      */
     readonly consulDatacenter?: string;
+
+    /**
+     * ECS healthChecks for the application container
+     * 
+     * @default - No ECS health checks
+     */
+     healthCheck?: ecs.HealthCheck;
+
+     /**
+      * consul native checks
+      * 
+      * @default - No consul native checks
+      */
+     consulChecks?: any[];
+
+    /**
+     * ACL secret arn
+     * 
+     * @default - No ACL secret arn
+     */
+     aclSecretArn?: string;
 }
 
 /**
@@ -168,6 +208,10 @@ export class ECSConsulMeshExtension extends ServiceExtension {
     private gossipEncryptKey?: secretsmanager.ISecret;
     private serviceDiscoveryName: string;
     private consulDatacenter?: string;
+    private healthCheck?: ecs.HealthCheck;
+    private consulChecks?: any[];
+    private healthSyncContainerName?: string; // ECS Health Sync Container Name
+    private aclSecretArn?: string;
 
     constructor(props: ECSConsulMeshProps) {
         super('consul');
@@ -183,6 +227,9 @@ export class ECSConsulMeshExtension extends ServiceExtension {
         this.gossipEncryptKey = props.gossipEncryptKey;
         this.serviceDiscoveryName = props.serviceDiscoveryName;
         this.consulDatacenter = props.consulDatacenter || "dc1";
+        this.healthCheck = props.healthCheck;
+        this.consulChecks = props.consulChecks || undefined;
+        this.aclSecretArn = props.aclSecretArn;
     }
 
     /**
@@ -194,7 +241,11 @@ export class ECSConsulMeshExtension extends ServiceExtension {
         if (!container) {
             throw new Error('Consul Mesh extension requires an application extension');
         }
-        container.addContainerMutatingHook(new ConsulMeshsMutatingHook());
+        const parentServiceConsulMesh = this.parentService.serviceDescription.get('consul') as ECSConsulMeshExtension;
+
+        container.addContainerMutatingHook(new ConsulMeshsMutatingHook(
+            { healthCheck: parentServiceConsulMesh.healthCheck }
+        ));
     }
 
     /**
@@ -291,6 +342,12 @@ export class ECSConsulMeshExtension extends ServiceExtension {
             }
         );
 
+        if(this.healthCheck && this.consulChecks){
+            throw new Error('Cannot define both Consul Native Checks and ECS Health Checks');
+        }
+
+        this.healthSyncContainerName = this.consulChecks ? "" : this.healthCheck ? serviceContainer.container?.containerName : "";
+
         //Mesh init config starts here
         this.meshInit = taskDefinition.addContainer('consul-ecs-mesh-init', {
             image: ecs.ContainerImage.fromRegistry(this.consulEcsImage),
@@ -299,6 +356,8 @@ export class ECSConsulMeshExtension extends ServiceExtension {
                 "-envoy-bootstrap-dir=/consul/data",
                 "-port=" + serviceContainer.trafficPort,
                 "-upstreams=" + this.buildUpstreamString,
+                "-health-sync-containers=" + this.healthSyncContainerName,
+                "-checks=" + (JSON.stringify(this.consulChecks) ?? ""),
                 "-service-name=" + this.serviceDiscoveryName],
             logging: new ecs.AwsLogDriver({ streamPrefix: 'consul-ecs-mesh-init' }),
             essential: false
@@ -361,6 +420,27 @@ export class ECSConsulMeshExtension extends ServiceExtension {
                 readOnly: false
             }
         );
+
+        if (this.healthSyncContainerName) {
+            const consulECSHealthSync = taskDefinition.addContainer('consul-ecs-health-sync', {
+                image: ecs.ContainerImage.fromRegistry(this.consulEcsImage),
+                memoryLimitMiB: 256,
+                command: ["health-sync",
+                    "-health-sync-containers=" + this.healthSyncContainerName,
+                    "-service-name=" + this.serviceDiscoveryName],
+                logging: new ecs.AwsLogDriver({ streamPrefix: 'consul-ecs-health-sync' }),
+                essential: false,
+                secrets: this.aclSecretArn ? { "CONSUL_HTTP_TOKEN": ecs.Secret.fromSecretsManager(secretsmanager.Secret.fromSecretAttributes(this.scope, 'ImportedACLSecret' + this.parentService.id, {
+                    secretCompleteArn: this.aclSecretArn,
+                  })) } : undefined
+            });
+
+            consulECSHealthSync.addContainerDependencies({
+                container: this.meshInit,
+                condition: ecs.ContainerDependencyCondition.SUCCESS
+            });
+            
+        }
     }
 
     private get buildConsulClientCommand(): string[] {
@@ -517,6 +597,8 @@ export class ECSConsulMeshExtension extends ServiceExtension {
             "-envoy-bootstrap-dir=/consul/data",
             "-port=" + serviceContainer.trafficPort,
             "-upstreams=" + this.buildUpstreamString,
+            "-health-sync-containers=" + this.healthSyncContainerName,
+            "-checks=" + (JSON.stringify(this.consulChecks) ?? ""),
             "-service-name=" + this.serviceDiscoveryName]);
 
 
@@ -537,11 +619,17 @@ export class ECSConsulMeshExtension extends ServiceExtension {
     }
 }
 
-
 export class ConsulMeshsMutatingHook extends ContainerMutatingHook {
+
+    private healthCheck?: ecs.HealthCheck;
+
+    constructor(containerMutatingProps: ContainerMutatingProps) {
+        super();
+        this.healthCheck = containerMutatingProps.healthCheck;
+    }
+
     public mutateContainerDefinition(props: ecs.ContainerDefinitionOptions): ecs.ContainerDefinitionOptions {
         environment = props.environment || {};
-
-        return { ...props } as ecs.ContainerDefinitionOptions;
+        return { ...props, healthCheck: this.healthCheck } as ecs.ContainerDefinitionOptions;
     }
 }

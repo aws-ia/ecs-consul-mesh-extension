@@ -60,7 +60,14 @@ test('Test extension with default params', () => {
     tls: true,
     consulCACert: TLSSecret,
     gossipEncryptKey,
-    serviceDiscoveryName: "name"
+    serviceDiscoveryName: "name",
+    aclSecretArn: "arn:aws:secretsmanager:us-east-2:1234556789:secret:i-07c446_consulAgentCaCert-NBIwAK",
+    healthCheck: {
+      command: ["CMD-SHELL", "curl localhost:3000/health"],
+      interval: cdk.Duration.seconds(30),
+      retries: 3,
+      timeout: cdk.Duration.seconds(5),
+    }
   }));
 
   const nameService = new Service(stack, 'name', {
@@ -84,7 +91,17 @@ test('Test extension with default params', () => {
     tls: true,
     consulCACert: TLSSecret,
     gossipEncryptKey,
-    serviceDiscoveryName: "greeter"
+    serviceDiscoveryName: "greeter",
+    consulChecks: [
+      {
+        checkid  : "server-http",
+        name     : "HTTP health check on port 3000",
+        http     : "http://localhost:3000/health",
+        method   : "GET",
+        timeout  : "10s",
+        interval : "2s",
+      }
+    ]
   }));
 
   const greeterService = new Service(stack, 'greeter', {
@@ -226,6 +243,8 @@ test('Test extension with default params', () => {
           "-envoy-bootstrap-dir=/consul/data",
           "-port=3000",
           "-upstreams=name:8080",
+          "-health-sync-containers=",
+          "-checks=[{\"checkid\":\"server-http\",\"name\":\"HTTP health check on port 3000\",\"http\":\"http://localhost:3000/health\",\"method\":\"GET\",\"timeout\":\"10s\",\"interval\":\"2s\"}]",
           "-service-name=greeter"
         ],
         "Essential": false,
@@ -373,6 +392,15 @@ test('Test extension with default params', () => {
           }
         ],
         "Essential": true,
+        "HealthCheck": {
+          "Command": [
+            "CMD-SHELL",
+            "curl localhost:3000/health"
+          ],
+          "Interval": 30,
+          "Retries": 3,
+          "Timeout": 5
+        },
         "Image": "nathanpeck/name",
         "Memory": 2048,
         "Name": "app",
@@ -483,6 +511,8 @@ test('Test extension with default params', () => {
           "-envoy-bootstrap-dir=/consul/data",
           "-port=3000",
           "-upstreams=",
+          "-health-sync-containers=app",
+          "-checks=",
           "-service-name=name"
         ],
         "Essential": false,
@@ -576,6 +606,41 @@ test('Test extension with default params', () => {
             "HardLimit": 1048576,
             "Name": "nofile",
             "SoftLimit": 1048576
+          }
+        ]
+      },
+      {
+        "Command": [
+          "health-sync",
+          "-health-sync-containers=app",
+          "-service-name=name"
+        ],
+        "DependsOn": [
+          {
+            "Condition": "SUCCESS",
+            "ContainerName": "consul-ecs-mesh-init"
+          }
+        ],
+        "Essential": false,
+        "Image": "hashicorp/consul-ecs:0.2.0",
+        "LogConfiguration": {
+          "LogDriver": "awslogs",
+          "Options": {
+            "awslogs-group": {
+              "Ref": "nametaskdefinitionconsulecshealthsyncLogGroup7DFDAAAC"
+            },
+            "awslogs-stream-prefix": "consul-ecs-health-sync",
+            "awslogs-region": {
+              "Ref": "AWS::Region"
+            }
+          }
+        },
+        "Memory": 256,
+        "Name": "consul-ecs-health-sync",
+        "Secrets": [
+          {
+            "Name": "CONSUL_HTTP_TOKEN",
+            "ValueFrom": "arn:aws:secretsmanager:us-east-2:1234556789:secret:i-07c446_consulAgentCaCert-NBIwAK"
           }
         ]
       }
@@ -927,6 +992,8 @@ test('Test extension with custom params', () => {
           "-envoy-bootstrap-dir=/consul/data",
           "-port=3000",
           "-upstreams=name:3001",
+          "-health-sync-containers=",
+          "-checks=",
           "-service-name=greeter"
         ],
         "Essential": false,
@@ -1183,6 +1250,8 @@ test('Test extension with custom params', () => {
           "-envoy-bootstrap-dir=/consul/data",
           "-port=3000",
           "-upstreams=",
+          "-health-sync-containers=",
+          "-checks=",
           "-service-name=name"
         ],
         "Essential": false,
@@ -1482,5 +1551,75 @@ const development = new Environment(stack, 'development');
   }).toThrow("Unable to connect services from different environments");
 
 });
+
+test('should detect when attempting to define both consul checks and ECS health checks', () => {
+  // GIVEN
+ const stack = new cdk.Stack();
+ 
+ // WHEN
+ const test = new Environment(stack, 'test');
+ 
+   const consulSecurityGroup = new ec2.SecurityGroup(stack, 'consulServerSecurityGroup', {
+     vpc: test.vpc
+   });
+ 
+   const consulClientSecurityGroup = new ec2.SecurityGroup(stack, 'consulClientSecurityGroup', {
+     vpc: test.vpc
+   });
+ 
+   consulClientSecurityGroup.addIngressRule(
+     consulClientSecurityGroup,
+     ec2.Port.tcp(8301),
+     "allow all the clients in the mesh talk to each other"
+   );
+   consulClientSecurityGroup.addIngressRule(
+     consulClientSecurityGroup,
+     ec2.Port.udp(8301),
+     "allow all the clients in the mesh talk to each other"
+   )
+ 
+   const nameDescription = new ServiceDescription();
+   nameDescription.add(new Container({
+     cpu: 1024,
+     memoryMiB: 2048,
+     trafficPort: 3000,
+     image: ecs.ContainerImage.fromRegistry('nathanpeck/name')
+   }));
+ 
+   nameDescription.add(new ECSConsulMeshExtension({
+     retryJoin: new RetryJoin({ region: "us-west-2", tagName: "Name", tagValue: "test-consul-server" }),
+     consulServerSecurityGroup: consulSecurityGroup,
+     consulClientImage: "myCustomConsulClientImage:1.0",
+     consulEcsImage: "myCustomConsulEcsImage:1.0",
+     envoyProxyImage: "myCustomEnvoyImage:1.0",
+     consulClientSecurityGroup,
+     serviceDiscoveryName: "name",
+     healthCheck: {
+        command: ["CMD-SHELL", "curl localhost:3000/health"],
+        interval: cdk.Duration.seconds(30),
+        retries: 3,
+        timeout: cdk.Duration.seconds(5),
+     }, 
+     consulChecks: [
+      {
+          checkid  : "server-http",
+          name     : "HTTP health check on port 3000",
+          http     : "http://localhost:3000/health",
+          method   : "GET",
+          timeout  : "10s",
+          interval : "2s",
+      } 
+     ]
+   }));
+ 
+   // THEN
+   expect( () => {
+      new Service(stack, 'name', {
+        environment: test,
+        serviceDescription: nameDescription
+      })
+   }
+  ).toThrow("Cannot define both Consul Native Checks and ECS Health Checks");
+ });
 
 });
