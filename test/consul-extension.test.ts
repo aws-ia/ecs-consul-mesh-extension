@@ -139,6 +139,13 @@ test('Test extension with default params', () => {
         "Essential": true,
         "Image": "nathanpeck/greeter",
         "Memory": 2048,
+        "MountPoints": [
+          {
+            "ContainerPath": "/consul/data",
+            "ReadOnly": true,
+            "SourceVolume": "consul-data"
+          }
+        ],
         "Name": "app",
         "PortMappings": [
           {
@@ -417,6 +424,13 @@ test('Test extension with default params', () => {
         },
         "Image": "nathanpeck/name",
         "Memory": 2048,
+        "MountPoints": [
+          {
+            "ContainerPath": "/consul/data",
+            "ReadOnly": true,
+            "SourceVolume": "consul-data"
+          }
+        ],
         "Name": "app",
         "PortMappings": [
           {
@@ -908,6 +922,13 @@ test('Test extension with custom params', () => {
         "Essential": true,
         "Image": "nathanpeck/greeter",
         "Memory": 2048,
+        "MountPoints": [
+          {
+            "ContainerPath": "/consul/data",
+            "ReadOnly": true,
+            "SourceVolume": "consul-data"
+          }
+        ],
         "Name": "app",
         "PortMappings": [
           {
@@ -1166,6 +1187,13 @@ test('Test extension with custom params', () => {
         "Essential": true,
         "Image": "nathanpeck/name",
         "Memory": 2048,
+        "MountPoints": [
+          {
+            "ContainerPath": "/consul/data",
+            "ReadOnly": true,
+            "SourceVolume": "consul-data"
+          }
+        ],
         "Name": "app",
         "PortMappings": [
           {

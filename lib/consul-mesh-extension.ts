@@ -318,6 +318,12 @@ export class ECSConsulMeshExtension extends ServiceExtension {
             throw new Error(`Cannot find service-container`);
         }
 
+        serviceContainer.container?.addMountPoints({
+            containerPath: "/consul/data",
+            sourceVolume: "consul-data",
+            readOnly: true
+        });
+
         new Policy(this.scope, `task-role-${this.parentService.id}`, {
             roles: [taskDefinition.taskRole],
             statements: [
