@@ -34,6 +34,21 @@ export interface ContainerMutatingProps {
      * @default - No Application Container Health Checks
      */
     readonly healthCheck?: ecs.HealthCheck;
+
+    /**
+     * Custom app entry point
+     * 
+     * @default - No app entry point
+     */
+     readonly appEntryPoint?: string[];
+
+     /**
+      * if you override entryPoint field then you may need to set the `command` field on the 
+      * container definition to ensure the container starts properly.
+      * 
+      * @default - No commands
+      */
+     command?: string[];
 }
 
 export interface RetryJoinProps {
@@ -176,6 +191,27 @@ export interface ECSConsulMeshProps {
      * @default - No ACL secret arn
      */
      aclSecretArn?: string;
+
+     /**
+      * Set an application entrypoint to delay the TERM signal from ECS for this many seconds.
+      * This allows time for incoming traffic to drain off before your application container exits.
+      * This cannot delay the KILL signal from ECS, so this delay should be shorter than the `stopTimeout`
+      * on the container definition. This will set the `entryPoint` field for each container in `container_definitions` that does not have 
+      * an `entryPoint` field. Containers with a non-null `entryPoint` field will be ignored. Since this sets
+      * an explicit entrypoint, the default entrypoint from the image (if present) will not be used. You may
+      * need to set the `command` field on the container definition to ensure the container starts properly.
+      * 
+      * @default - No application shutdown delay
+      */
+     applicationShutdownDelaySeconds?: number;
+
+    /**
+     * if you override entryPoint field then you may need to set the `command` field on the 
+     * container definition to ensure the container starts properly.
+     * 
+     * @default - No commands 
+     */
+     command?: string[];
 }
 
 /**
@@ -212,6 +248,8 @@ export class ECSConsulMeshExtension extends ServiceExtension {
     private consulChecks?: any[];
     private healthSyncContainerName?: string; // ECS Health Sync Container Name
     private aclSecretArn?: string;
+    private applicationShutdownDelaySeconds?: number;
+    private command?: string[];
 
     constructor(props: ECSConsulMeshProps) {
         super('consul');
@@ -230,6 +268,8 @@ export class ECSConsulMeshExtension extends ServiceExtension {
         this.healthCheck = props.healthCheck;
         this.consulChecks = props.consulChecks || undefined;
         this.aclSecretArn = props.aclSecretArn;
+        this.applicationShutdownDelaySeconds = props.applicationShutdownDelaySeconds;
+        this.command = props.command;
     }
 
     /**
@@ -243,8 +283,12 @@ export class ECSConsulMeshExtension extends ServiceExtension {
         }
         const parentServiceConsulMesh = this.parentService.serviceDescription.get('consul') as ECSConsulMeshExtension;
 
+        const appEntryPoint = this.applicationShutdownDelaySeconds ? [
+            "/consul/data/consul-ecs", "app-entrypoint", "-shutdown-delay", this.applicationShutdownDelaySeconds + "s"
+          ] : undefined;
+
         container.addContainerMutatingHook(new ConsulMeshsMutatingHook(
-            { healthCheck: parentServiceConsulMesh.healthCheck }
+            { healthCheck: parentServiceConsulMesh.healthCheck, appEntryPoint: appEntryPoint, command: this.command }
         ));
     }
 
@@ -622,14 +666,18 @@ export class ECSConsulMeshExtension extends ServiceExtension {
 export class ConsulMeshsMutatingHook extends ContainerMutatingHook {
 
     private healthCheck?: ecs.HealthCheck;
+    private appEntryPoint?: string[];
+    private command?: string[];
 
     constructor(containerMutatingProps: ContainerMutatingProps) {
         super();
         this.healthCheck = containerMutatingProps.healthCheck;
+        this.appEntryPoint = containerMutatingProps.appEntryPoint;
+        this.command = containerMutatingProps.command;
     }
 
     public mutateContainerDefinition(props: ecs.ContainerDefinitionOptions): ecs.ContainerDefinitionOptions {
         environment = props.environment || {};
-        return { ...props, healthCheck: this.healthCheck } as ecs.ContainerDefinitionOptions;
+        return { ...props, healthCheck: this.healthCheck, entryPoint: props.entryPoint ??  this.appEntryPoint, command: props.command ?? this.command } as ecs.ContainerDefinitionOptions;
     }
 }
