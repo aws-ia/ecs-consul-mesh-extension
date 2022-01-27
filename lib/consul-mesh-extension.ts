@@ -40,7 +40,7 @@ export interface ContainerMutatingProps {
      * 
      * @default - No app entry point
      */
-     readonly appEntryPoint?: string[];
+     readonly applicationEntryPoint?: string[];
 
      /**
       * if you override entryPoint field then you may need to set the `command` field on the 
@@ -283,12 +283,12 @@ export class ECSConsulMeshExtension extends ServiceExtension {
         }
         const parentServiceConsulMesh = this.parentService.serviceDescription.get('consul') as ECSConsulMeshExtension;
 
-        const appEntryPoint = this.applicationShutdownDelaySeconds ? [
+        const applicationEntryPoint = this.applicationShutdownDelaySeconds ? [
             "/consul/data/consul-ecs", "app-entrypoint", "-shutdown-delay", this.applicationShutdownDelaySeconds + "s"
           ] : undefined;
 
         container.addContainerMutatingHook(new ConsulMeshsMutatingHook(
-            { healthCheck: parentServiceConsulMesh.healthCheck, appEntryPoint: appEntryPoint, command: this.command }
+            { healthCheck: parentServiceConsulMesh.healthCheck, applicationEntryPoint: applicationEntryPoint, command: this.command }
         ));
     }
 
@@ -672,18 +672,18 @@ export class ECSConsulMeshExtension extends ServiceExtension {
 export class ConsulMeshsMutatingHook extends ContainerMutatingHook {
 
     private healthCheck?: ecs.HealthCheck;
-    private appEntryPoint?: string[];
+    private applicationEntryPoint?: string[];
     private command?: string[];
 
     constructor(containerMutatingProps: ContainerMutatingProps) {
         super();
         this.healthCheck = containerMutatingProps.healthCheck;
-        this.appEntryPoint = containerMutatingProps.appEntryPoint;
+        this.applicationEntryPoint = containerMutatingProps.applicationEntryPoint;
         this.command = containerMutatingProps.command;
     }
 
     public mutateContainerDefinition(props: ecs.ContainerDefinitionOptions): ecs.ContainerDefinitionOptions {
         environment = props.environment || {};
-        return { ...props, healthCheck: this.healthCheck, entryPoint: props.entryPoint ??  this.appEntryPoint, command: props.command ?? this.command } as ecs.ContainerDefinitionOptions;
+        return { ...props, healthCheck: this.healthCheck, entryPoint: props.entryPoint ??  this.applicationEntryPoint, command: props.command ?? this.command } as ecs.ContainerDefinitionOptions;
     }
 }
