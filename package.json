@@ -17,19 +17,20 @@
   "author": "Amazon Web Services",
   "license": "Apache-2.0",
   "dependencies": {
-    "@aws-cdk-containers/ecs-service-extensions": "^1.133.0",
-    "@aws-cdk/aws-ec2": "^1.133.0",
-    "@aws-cdk/core": "^1.133.0",
+    "@aws-cdk-containers/ecs-service-extensions": "^2.0.0-alpha.60",
+    "aws-cdk-lib": "^2.27.0",
+    "constructs": "^10.0.5",
     "source-map-support": "^0.5.16"
   },
   "devDependencies": {
     "@aws-cdk/assert": "^1.133.0",
     "@types/jest": "^27.0.2",
     "@types/node": "^16.10.1",
-    "aws-cdk": "^1.133.0",
+    "aws-cdk-lib": "^2.27.0",
     "jest": "^27.3.1",
     "ts-jest": "^27.0.5",
     "ts-node": "^10.2.1",
+    "constructs": "^10.0.5",
     "typescript": "~4.4.3"
   },
   "main": "lib/index.js",
