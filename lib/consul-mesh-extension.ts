@@ -1,15 +1,14 @@
-import * as cdk from '@aws-cdk/core';
-import { ISecurityGroup, Port } from '@aws-cdk/aws-ec2';
-import * as ecs from '@aws-cdk/aws-ecs';
-import { Policy, PolicyStatement } from '@aws-cdk/aws-iam'
 import {
-    ServiceExtension,
-    Service,
-    Container,
-    ContainerMutatingHook,
-    ConnectToProps
+  ConnectToProps,
+  Container,
+  ContainerMutatingHook,
+  Service,
+  ServiceExtension,
 } from '@aws-cdk-containers/ecs-service-extensions';
-import * as secretsmanager from '@aws-cdk/aws-secretsmanager'
+import { aws_ecs as ecs, aws_secretsmanager as secretsmanager, Duration, Stack } from 'aws-cdk-lib';
+import { ISecurityGroup, Port } from 'aws-cdk-lib/aws-ec2';
+import { Policy, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { Construct } from 'constructs';
 
 /**
  * envoy, consul and consul-ecs container images
@@ -253,7 +252,7 @@ export class ECSConsulMeshExtension extends ServiceExtension {
      * @param service The parent service which this extension has been added to
      * @param scope The scope that this extension should create resources in
      */
-    public prehook(service: Service, scope: cdk.Construct) {
+    public prehook(service: Service, scope: Construct) {
         this.parentService = service;
         this.scope = scope;
     }
@@ -282,7 +281,7 @@ export class ECSConsulMeshExtension extends ServiceExtension {
                     resources: ['*'],
                     conditions: {
                         StringEquals: {
-                            "aws:RequestedRegion": cdk.Stack.of(this.parentService).region
+                            "aws:RequestedRegion": Stack.of(this.parentService).region
                         }
                     }
                 }),
@@ -388,8 +387,8 @@ export class ECSConsulMeshExtension extends ServiceExtension {
             }],
             healthCheck: {
                 command: ["nc", "-z", "127.0.0.1", "20000"],
-                interval: cdk.Duration.seconds(30),
-                timeout: cdk.Duration.seconds(5),
+                interval: Duration.seconds(30),
+                timeout: Duration.seconds(5),
                 retries: 3,
             },
             essential: false
@@ -583,7 +582,7 @@ export class ECSConsulMeshExtension extends ServiceExtension {
 
         const upstreamName = otherConsulMesh.serviceDiscoveryName;
 
-        this.upstreamStringArray.push(upstreamName + ":" + (connectToProps.local_bind_port ?? this.upstreamPort));
+        this.upstreamStringArray.push(upstreamName + ":" + (connectToProps.localBindPort ?? this.upstreamPort));
 
         var cfnTaskDefinition = this.parentService?.ecsService?.taskDefinition?.node.defaultChild as ecs.CfnTaskDefinition;
 
@@ -608,7 +607,7 @@ export class ECSConsulMeshExtension extends ServiceExtension {
             }
         }
 
-        this.parentServiceEnvironments.push({ Name: upstreamName.toUpperCase() + '_URL', Value: 'http://localhost:' + (connectToProps.local_bind_port ?? this.upstreamPort++)})
+        this.parentServiceEnvironments.push({ Name: upstreamName.toUpperCase() + '_URL', Value: 'http://localhost:' + (connectToProps.localBindPort ?? this.upstreamPort++)})
 
         //Also add required environment variables
         cfnTaskDefinition.addPropertyOverride('ContainerDefinitions.0.Environment', Array.from(this.parentServiceEnvironments.values()));
