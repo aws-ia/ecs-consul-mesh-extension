@@ -1,11 +1,13 @@
-import { expect as expectCDK, haveResource } from '@aws-cdk/assert';
-import * as cdk from '@aws-cdk/core';
-import { Environment, ServiceDescription, Container, Service } from '@aws-cdk-containers/ecs-service-extensions';
-import * as ecs from '@aws-cdk/aws-ecs';
-import { ECSConsulMeshExtension, RetryJoin } from '../lib/consul-mesh-extension'
-import * as ec2 from '@aws-cdk/aws-ec2';
-import { Stack } from '@aws-cdk/core';
-import * as secretsmanager from '@aws-cdk/aws-secretsmanager';
+import {
+  Container,
+  Environment,
+  Service,
+  ServiceDescription,
+} from '@aws-cdk-containers/ecs-service-extensions';
+import { aws_ecs as ecs, aws_secretsmanager as secretsmanager, Duration, Stack } from 'aws-cdk-lib';
+import { Match, Template } from 'aws-cdk-lib/assertions';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import { ECSConsulMeshExtension, RetryJoin } from '../lib/consul-mesh-extension';
 
 describe('consulmesh', () => {
 test('Test extension with default params', () => {
@@ -64,9 +66,9 @@ test('Test extension with default params', () => {
     aclSecretArn: "arn:aws:secretsmanager:us-east-2:1234556789:secret:i-07c446_consulAgentCaCert-NBIwAK",
     healthCheck: {
       command: ["CMD-SHELL", "curl localhost:3000/health"],
-      interval: cdk.Duration.seconds(30),
+      interval: Duration.seconds(30),
       retries: 3,
-      timeout: cdk.Duration.seconds(5),
+      timeout: Duration.seconds(5),
     }
   }));
 
@@ -109,10 +111,11 @@ test('Test extension with default params', () => {
     serviceDescription: greeterDescription
   });
 
-  greeterService.connectTo(nameService, { local_bind_port: 8080})
+  greeterService.connectTo(nameService, { localBindPort: 8080})
 
   //THEN
-  expectCDK(stack).to(haveResource('AWS::ECS::TaskDefinition', {
+  const template = Template.fromStack(stack);
+  template.hasResourceProperties('AWS::ECS::TaskDefinition', {
     "ContainerDefinitions": [
       {
         "Cpu": 1024,
@@ -375,9 +378,9 @@ test('Test extension with default params', () => {
     ]
 
   }
-  ));
+  );
 
-  expectCDK(stack).to(haveResource('AWS::ECS::TaskDefinition', {
+  template.hasResourceProperties('AWS::ECS::TaskDefinition', {
     "ContainerDefinitions": [
       {
         "Cpu": 1024,
@@ -678,9 +681,9 @@ test('Test extension with default params', () => {
     ]
 
   }
-  ));
+  );
 
-  expectCDK(stack).to(haveResource('AWS::ECS::Service', {
+  template.hasResourceProperties('AWS::ECS::Service', {
       "Cluster": {
         "Ref": "productionenvironmentclusterC6599D2D"
       },
@@ -721,9 +724,9 @@ test('Test extension with default params', () => {
       "TaskDefinition": {
         "Ref": "nametaskdefinition690762BB"
       } 
-  }));
+  });
   
-  expectCDK(stack).to(haveResource('AWS::ECS::Service', {
+  template.hasResourceProperties('AWS::ECS::Service', {
     "Cluster": {
       "Ref": "productionenvironmentclusterC6599D2D"
     },
@@ -764,7 +767,7 @@ test('Test extension with default params', () => {
     "TaskDefinition": {
       "Ref": "greetertaskdefinitionE956EEA2"
     }
-  })); 
+  }); 
 });
 
 
@@ -861,7 +864,8 @@ test('Test extension with custom params', () => {
   greeterService.connectTo(nameService);
 
   //THEN
-  expectCDK(stack).to(haveResource('AWS::ECS::TaskDefinition', {
+  const template = Template.fromStack(stack)
+  template.hasResourceProperties('AWS::ECS::TaskDefinition', {
     "ContainerDefinitions": [
       {
         "Cpu": 1024,
@@ -1123,9 +1127,9 @@ test('Test extension with custom params', () => {
       }
     ]
   }
-  ));
+  );
 
-  expectCDK(stack).to(haveResource('AWS::ECS::TaskDefinition', {
+  template.hasResourceProperties('AWS::ECS::TaskDefinition', {
     "ContainerDefinitions": [
       {
         "Cpu": 1024,
@@ -1382,8 +1386,8 @@ test('Test extension with custom params', () => {
     ]
 
   }
-  ));
-  expectCDK(stack).to(haveResource('AWS::ECS::Service', {
+  );
+  template.hasResourceProperties('AWS::ECS::Service', {
     "Cluster": {
       "Ref": "productionenvironmentclusterC6599D2D"
     },
@@ -1424,9 +1428,9 @@ test('Test extension with custom params', () => {
     "TaskDefinition": {
       "Ref": "nametaskdefinition690762BB"
     } 
-}));
+});
 
-expectCDK(stack).to(haveResource('AWS::ECS::Service', {
+template.hasResourceProperties('AWS::ECS::Service', {
   "Cluster": {
     "Ref": "productionenvironmentclusterC6599D2D"
   },
@@ -1467,13 +1471,13 @@ expectCDK(stack).to(haveResource('AWS::ECS::Service', {
   "TaskDefinition": {
     "Ref": "greetertaskdefinitionE956EEA2"
   }
-}));
+});
 });
 
 
 test('should detect when attempting to connect services from two different envs', () => {
  // GIVEN
-const stack = new cdk.Stack();
+const stack = new Stack();
 
 // WHEN
 const production = new Environment(stack, 'production');
@@ -1554,7 +1558,7 @@ const development = new Environment(stack, 'development');
 
 test('should detect when attempting to define both consul checks and ECS health checks', () => {
   // GIVEN
- const stack = new cdk.Stack();
+ const stack = new Stack();
  
  // WHEN
  const test = new Environment(stack, 'test');
@@ -1596,9 +1600,9 @@ test('should detect when attempting to define both consul checks and ECS health 
      serviceDiscoveryName: "name",
      healthCheck: {
         command: ["CMD-SHELL", "curl localhost:3000/health"],
-        interval: cdk.Duration.seconds(30),
+        interval: Duration.seconds(30),
         retries: 3,
-        timeout: cdk.Duration.seconds(5),
+        timeout: Duration.seconds(5),
      }, 
      consulChecks: [
       {
