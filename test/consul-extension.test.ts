@@ -67,7 +67,9 @@ test('Test extension with default params', () => {
       interval: cdk.Duration.seconds(30),
       retries: 3,
       timeout: cdk.Duration.seconds(5),
-    }
+    },
+    applicationShutdownDelaySeconds: 10,
+        command: ["node", "index.js"]
   }));
 
   const nameService = new Service(stack, 'name', {
@@ -101,7 +103,9 @@ test('Test extension with default params', () => {
         timeout  : "10s",
         interval : "2s",
       }
-    ]
+    ],
+    applicationShutdownDelaySeconds: 10,
+    command: ["node", "index.js"]
   }));
 
   const greeterService = new Service(stack, 'greeter', {
@@ -135,6 +139,13 @@ test('Test extension with default params', () => {
         "Essential": true,
         "Image": "nathanpeck/greeter",
         "Memory": 2048,
+        "MountPoints": [
+          {
+            "ContainerPath": "/consul/data",
+            "ReadOnly": true,
+            "SourceVolume": "consul-data"
+          }
+        ],
         "Name": "app",
         "PortMappings": [
           {
@@ -148,6 +159,16 @@ test('Test extension with default params', () => {
             "Name": "nofile",
             "SoftLimit": 1024000
           }
+        ],
+        "Command": [
+          "node",
+          "index.js"
+        ],
+        "EntryPoint": [
+          "/consul/data/consul-ecs",
+          "app-entrypoint",
+          "-shutdown-delay",
+          "10s"
         ]
       },
       {
@@ -403,6 +424,13 @@ test('Test extension with default params', () => {
         },
         "Image": "nathanpeck/name",
         "Memory": 2048,
+        "MountPoints": [
+          {
+            "ContainerPath": "/consul/data",
+            "ReadOnly": true,
+            "SourceVolume": "consul-data"
+          }
+        ],
         "Name": "app",
         "PortMappings": [
           {
@@ -416,6 +444,16 @@ test('Test extension with default params', () => {
             "Name": "nofile",
             "SoftLimit": 1024000
           }
+        ],
+        "Command": [
+          "node",
+          "index.js"
+        ],
+        "EntryPoint": [
+          "/consul/data/consul-ecs",
+          "app-entrypoint",
+          "-shutdown-delay",
+          "10s"
         ]
       },
       {
@@ -884,6 +922,13 @@ test('Test extension with custom params', () => {
         "Essential": true,
         "Image": "nathanpeck/greeter",
         "Memory": 2048,
+        "MountPoints": [
+          {
+            "ContainerPath": "/consul/data",
+            "ReadOnly": true,
+            "SourceVolume": "consul-data"
+          }
+        ],
         "Name": "app",
         "PortMappings": [
           {
@@ -1142,6 +1187,13 @@ test('Test extension with custom params', () => {
         "Essential": true,
         "Image": "nathanpeck/name",
         "Memory": 2048,
+        "MountPoints": [
+          {
+            "ContainerPath": "/consul/data",
+            "ReadOnly": true,
+            "SourceVolume": "consul-data"
+          }
+        ],
         "Name": "app",
         "PortMappings": [
           {
